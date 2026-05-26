@@ -83,6 +83,7 @@ class ActivityCreate(BaseModel):
     date: Optional[datetime] = None
     location: Optional[str] = None
     cover_image: Optional[str] = None
+    publish_at: Optional[datetime] = None
     activity_type: Optional[str] = None  # deportiva | cultural | academica
 
 class ActivityUpdate(BaseModel):
@@ -91,7 +92,19 @@ class ActivityUpdate(BaseModel):
     date: Optional[datetime] = None
     location: Optional[str] = None
     cover_image: Optional[str] = None
+    publish_at: Optional[datetime] = None
     activity_type: Optional[str] = None
+
+
+class ActivityAttachment(BaseModel):
+    id: str
+    url: str
+    storage_path: Optional[str] = None
+    filename: str
+    content_type: str
+    kind: str  # image | video | audio | document
+    caption: Optional[str] = None
+    created_at: datetime
 
 class ActivityRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -101,6 +114,8 @@ class ActivityRead(BaseModel):
     date: Optional[datetime]
     location: Optional[str]
     cover_image: Optional[str]
+    attachments: List[ActivityAttachment] = Field(default_factory=list)
+    publish_at: Optional[datetime]
     activity_type: Optional[str]
     created_at: datetime
 

@@ -51,6 +51,8 @@ class Activity(SQLModel, table=True):
     date: Optional[datetime] = None
     location: Optional[str] = None
     cover_image: Optional[str] = None
+    attachments_json: Optional[str] = None
+    publish_at: Optional[datetime] = None
     activity_type: Optional[str] = None  # deportiva|cultural|academica
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -124,7 +126,7 @@ class SiteProfile(SQLModel, table=True):
     hero_image_url: Optional[str] = "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1600&q=80"
     address: Optional[str] = "San Juan de Yapacaní, Bolivia"
     phone: Optional[str] = "+591 3 1234567"
-    email: Optional[str] = "sagradocorazon4@ue.edu.bo"
+    email: Optional[str] = "uesagradocorazon4@gmail.com"
     facebook_url: Optional[str] = None
     instagram_url: Optional[str] = None
     youtube_url: Optional[str] = None

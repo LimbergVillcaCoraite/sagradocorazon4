@@ -15,6 +15,25 @@ const navItems = [
   { id: 'admin', label: 'Admin' },
 ]
 
+function NavIcon({ sectionId }) {
+  const paths = {
+    inicio: <path d="M3 10.5 12 3l9 7.5v8.5a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />,
+    avisos: <path d="M4 11v2l2 2v4h3v-3h6l5 3V5l-5 3H9V5H6v4z" />,
+    noticias: <><path d="M5 4h14a1 1 0 0 1 1 1v14H4V5a1 1 0 0 1 1-1z" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
+    actividades: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></>,
+    galeria: <><rect x="4" y="5" width="16" height="14" rx="2" /><path d="m8 14 3-3 2 2 3-3 4 4" /></>,
+    historia: <><path d="M5 5h6a3 3 0 0 1 3 3v11H8a3 3 0 0 0-3 3z" /><path d="M19 5h-6a3 3 0 0 0-3 3v11h6a3 3 0 0 1 3 3z" /></>,
+    acceso: <><path d="M11 21h-5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" /><path d="M15 8l5 4-5 4" /><path d="M20 12H9" /></>,
+    admin: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z" /></>,
+  }
+  const icon = paths[sectionId] || paths.inicio
+  return (
+    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {icon}
+    </svg>
+  )
+}
+
 const defaultProfile = {
   school_name: '',
   tagline: '',
@@ -41,6 +60,10 @@ const defaultContentForm = {
   noticeAudience: 'all',
   activityTitle: '',
   activityDescription: '',
+  activityType: 'cultural',
+  activityLocation: '',
+  activityDate: '',
+  activityPublishAt: '',
   galleryTitle: '',
   galleryDescription: '',
   historyContent: '',
@@ -374,6 +397,69 @@ function NewsAttachmentManager({ news, onDeleteAttachment, onPublish, canPublish
   )
 }
 
+function splitActivityMedia(item) {
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : []
+  const uniqueByUrl = new Map()
+  const add = (attachment) => {
+    if (!attachment?.url || uniqueByUrl.has(attachment.url)) return
+    uniqueByUrl.set(attachment.url, attachment)
+  }
+  if (item?.cover_image) {
+    add({
+      id: `cover-${item.id}`,
+      url: item.cover_image,
+      filename: 'Portada',
+      content_type: 'image/*',
+      kind: 'image',
+      created_at: item.created_at,
+    })
+  }
+  attachments.forEach((attachment) => {
+    const contentType = attachment.content_type || ''
+    const kind = attachment.kind || (
+      contentType.startsWith('image/') ? 'image' :
+      contentType.startsWith('video/') ? 'video' :
+      contentType.startsWith('audio/') ? 'audio' :
+      'document'
+    )
+    add({ ...attachment, kind })
+  })
+  const media = Array.from(uniqueByUrl.values())
+  return {
+    images: media.filter((item) => item.kind === 'image'),
+    videos: media.filter((item) => item.kind === 'video'),
+    audios: media.filter((item) => item.kind === 'audio'),
+    documents: media.filter((item) => item.kind === 'document'),
+  }
+}
+
+function ActivityFilePreviewList({ files, onRemove }) {
+  if (!files.length) return null
+  return (
+    <div className="news-preview-grid">
+      {files.map((item) => (
+        <div key={item.id} className="news-preview-card">
+          {item.kind === 'image' ? (
+            <div className="news-preview-card__media">
+              <img src={item.previewUrl} alt={item.file.name} />
+            </div>
+          ) : (
+            <div className="news-preview-card__media news-preview-card__media--doc">
+              <strong>{item.kind.toUpperCase()}</strong>
+              <span>{item.file.name.split('.').pop()?.toUpperCase() || 'FILE'}</span>
+            </div>
+          )}
+          <div className="news-preview-card__body">
+            <strong>{item.file.name}</strong>
+            <small>{item.kind === 'image' ? 'Se mostrara como imagen' : `Adjunto tipo ${item.kind}`}</small>
+          </div>
+          <button className="btn btn--ghost btn--small" type="button" onClick={() => onRemove(item.id)}>Quitar</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) }
   const body = options.body
@@ -458,9 +544,10 @@ function SectionTitle({ kicker, title, description }) {
   )
 }
 
-function SectionButton({ children, active, onClick }) {
+function SectionButton({ children, active, onClick, iconId }) {
   return (
     <button className={`nav-pill ${active ? 'active' : ''}`} onClick={onClick} type="button">
+      <NavIcon sectionId={iconId} />
       {children}
     </button>
   )
@@ -709,7 +796,7 @@ function AuthPanel({ token, userLabel, roleLabel, onLogin, onLogout }) {
   )
 }
 
-function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) {
+function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onTokenMissing }) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const { addToast } = useToast()
@@ -719,7 +806,7 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
   const [uploadingNewsAttachmentLoading, setUploadingNewsAttachmentLoading] = useState(false)
   const [creatingNotice, setCreatingNotice] = useState(false)
   const [creatingActivityLoading, setCreatingActivityLoading] = useState(false)
-  const [uploadingActivityImageLoading, setUploadingActivityImageLoading] = useState(false)
+  const [uploadingActivityAttachmentLoading, setUploadingActivityAttachmentLoading] = useState(false)
   const [creatingGalleryLoading, setCreatingGalleryLoading] = useState(false)
   const [uploadingGalleryLoading, setUploadingGalleryLoading] = useState(false)
   const [savingHistoryLoading, setSavingHistoryLoading] = useState(false)
@@ -740,7 +827,9 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
   const [createdNews, setCreatedNews] = useState(null)
   const [newsDraftFiles, setNewsDraftFiles] = useState([])
   const [newsAttachmentFiles, setNewsAttachmentFiles] = useState([])
-  const [createdActivityId, setCreatedActivityId] = useState('')
+  const [activityDraftFiles, setActivityDraftFiles] = useState([])
+  const [activityAttachmentFiles, setActivityAttachmentFiles] = useState([])
+  const [createdActivity, setCreatedActivity] = useState(null)
   const [createdGalleryId, setCreatedGalleryId] = useState('')
   const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token])
   const activeSection = adminSections.find((section) => section.id === activeAdminSection) || adminSections[0]
@@ -768,6 +857,22 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
       })
     }
   }, [newsAttachmentFiles])
+
+  useEffect(() => {
+    return () => {
+      activityDraftFiles.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+    }
+  }, [activityDraftFiles])
+
+  useEffect(() => {
+    return () => {
+      activityAttachmentFiles.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+    }
+  }, [activityAttachmentFiles])
 
   function navigateAdminSection(sectionId) {
     setActiveAdminSection(sectionId)
@@ -848,6 +953,98 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
       return prev.filter((item) => item.id !== fileId)
     })
+  }
+
+  function mapActivityFileKind(file) {
+    if (file.type.startsWith('image/')) return 'image'
+    if (file.type.startsWith('video/')) return 'video'
+    if (file.type.startsWith('audio/')) return 'audio'
+    return 'document'
+  }
+
+  function handleActivityDraftFilesChange(e) {
+    const selectedFiles = Array.from(e.target.files || [])
+    setActivityDraftFiles((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+      return selectedFiles.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        kind: mapActivityFileKind(file),
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+      }))
+    })
+  }
+
+  function removeActivityDraftFile(fileId) {
+    setActivityDraftFiles((prev) => {
+      const target = prev.find((item) => item.id === fileId)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((item) => item.id !== fileId)
+    })
+  }
+
+  function handleActivityAttachmentFilesChange(e) {
+    const selectedFiles = Array.from(e.target.files || [])
+    setActivityAttachmentFiles((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+      return selectedFiles.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        kind: mapActivityFileKind(file),
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+      }))
+    })
+  }
+
+  function removeActivityAttachmentFile(fileId) {
+    setActivityAttachmentFiles((prev) => {
+      const target = prev.find((item) => item.id === fileId)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((item) => item.id !== fileId)
+    })
+  }
+
+  async function uploadActivityAttachment(activityId, files, caption = '') {
+    const fd = new FormData()
+    for (const f of files) fd.append('file', f)
+    if (caption) fd.append('caption', caption)
+    const response = await fetch(`${API_BASE}/activities/${activityId}/attachments`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    })
+    if (!response.ok) {
+      let detail = 'No se pudo subir el adjunto de actividad'
+      try {
+        const json = await response.json()
+        detail = json.detail || detail
+      } catch {
+        // ignore malformed bodies
+      }
+      throw new Error(detail)
+    }
+    return response.json()
+  }
+
+  async function deleteActivityAttachment(activityId, attachmentId) {
+    guard()
+    setError('')
+    setStatus('')
+    try {
+      const updated = await api(`/activities/${activityId}/attachments/${attachmentId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      })
+      setCreatedActivity(updated)
+      setStatus('Adjunto de actividad eliminado correctamente')
+      refreshPublic?.()
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function uploadNewsAttachment(newsId, files, caption = '') {
@@ -965,35 +1162,37 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
      return response.json()
    }
 
-   async function uploadImageToActivity(e) {
-        e.preventDefault()
-        guard()
-        setUploadingActivityImageLoading(true)
-        const file = e.target.activityImage?.files?.[0]
-        if (!file) {
-          setError('Selecciona una imagen para la actividad')
-          setUploadingActivityImageLoading(false)
-          return
-        }
-        setError('')
-        setStatus('')
-        try {
-          await fetch(`${API_BASE}/activities/${createdActivityId}/upload-cover`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-            body: (() => { const fd = new FormData(); fd.append('file', file); return fd; })(),
-          })
-          setStatus('Imagen de la actividad subida correctamente')
-          addToast('Imagen de la actividad subida', { type: 'success' })
-          e.target.reset()
-          setCreatedActivityId('')
-          refreshPublic?.()
-        } catch (err) {
-          setError(err.message)
-          addToast('Error al subir imagen de actividad: ' + err.message, { type: 'error' })
-        } finally {
-          setUploadingActivityImageLoading(false)
-        }
+   async function uploadActivityAttachments(e) {
+      e.preventDefault()
+      guard()
+      if (!createdActivity?.id) {
+        setError('Primero crea la actividad')
+        return
+      }
+      const files = Array.from(activityAttachmentFiles)
+      const caption = e.target.activityAttachmentCaption?.value || ''
+      if (!files.length) {
+        setError('Selecciona uno o mas archivos multimedia para adjuntar')
+        return
+      }
+      setUploadingActivityAttachmentLoading(true)
+      setError('')
+      setStatus('')
+      try {
+        const fileList = files.map((item) => item.file)
+        const updated = await uploadActivityAttachment(createdActivity.id, fileList, caption)
+        setCreatedActivity(updated)
+        setActivityAttachmentFiles([])
+        setStatus(files.length > 1 ? 'Adjuntos agregados a la actividad' : 'Adjunto agregado a la actividad')
+        addToast('Adjuntos agregados a la actividad', { type: 'success' })
+        e.target.reset()
+        refreshPublic?.()
+      } catch (err) {
+        setError(err.message)
+        addToast('Error al subir adjuntos de actividad: ' + err.message, { type: 'error' })
+      } finally {
+        setUploadingActivityAttachmentLoading(false)
+      }
    }
 
    async function uploadImageToGallery(e) {
@@ -1156,6 +1355,7 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
       setError('')
       setStatus('')
       setCreatingActivityLoading(true)
+      const draftFiles = [...activityDraftFiles]
       try {
         const activityData = await api('/activities', {
           method: 'POST',
@@ -1163,13 +1363,42 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
           body: JSON.stringify({
             title: form.activityTitle,
             description: form.activityDescription,
-            activity_type: 'cultural',
+            activity_type: form.activityType || 'cultural',
+            location: form.activityLocation || null,
+            date: form.activityDate ? new Date(form.activityDate).toISOString() : null,
+            publish_at: form.activityPublishAt ? new Date(form.activityPublishAt).toISOString() : null,
           }),
         })
-        setCreatedActivityId(activityData.id)
-        setStatus('Actividad creada. Ahora puedes subir su imagen de portada.')
+        let currentActivity = activityData
+        const failedFiles = []
+        for (const draftFile of draftFiles) {
+          try {
+            currentActivity = await uploadActivityAttachment(activityData.id, [draftFile.file], draftFile.file.name)
+          } catch (uploadError) {
+            failedFiles.push(`${draftFile.file.name}: ${uploadError.message}`)
+          }
+        }
+
+        setCreatedActivity(currentActivity)
+        if (failedFiles.length) {
+          setError(`La actividad se creo, pero algunos adjuntos fallaron: ${failedFiles.join(' | ')}`)
+          setStatus('Actividad creada con adjuntos parciales.')
+        } else if (draftFiles.length) {
+          setStatus('Actividad creada con adjuntos multimedia.')
+        } else {
+          setStatus('Actividad creada. Ya puedes agregar mas adjuntos.')
+        }
         addToast('Actividad creada', { type: 'success' })
-        setForm((prev) => ({ ...prev, activityTitle: '', activityDescription: '' }))
+        setForm((prev) => ({
+          ...prev,
+          activityTitle: '',
+          activityDescription: '',
+          activityType: 'cultural',
+          activityLocation: '',
+          activityDate: '',
+          activityPublishAt: '',
+        }))
+        setActivityDraftFiles([])
         refreshPublic?.()
       } catch (err) {
         setError(err.message)
@@ -1541,22 +1770,81 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
           <div className="grid gap-sm">
             <Card title="Crear actividad" subtitle="Activities">
               <form className="stack gap-sm" onSubmit={createActivity}>
-                <label className="field"><span>Título</span><input value={form.activityTitle} onChange={(e) => setForm((p) => ({ ...p, activityTitle: e.target.value }))} /></label>
-                <label className="field"><span>Descripción</span><textarea rows="4" value={form.activityDescription} onChange={(e) => setForm((p) => ({ ...p, activityDescription: e.target.value }))} /></label>
+                <label className="field"><span>Titulo</span><input value={form.activityTitle} onChange={(e) => setForm((p) => ({ ...p, activityTitle: e.target.value }))} /></label>
+                <label className="field"><span>Descripcion</span><textarea rows="4" value={form.activityDescription} onChange={(e) => setForm((p) => ({ ...p, activityDescription: e.target.value }))} /></label>
+                <label className="field">
+                  <span>Tipo de actividad</span>
+                  <select value={form.activityType} onChange={(e) => setForm((p) => ({ ...p, activityType: e.target.value }))}>
+                    <option value="cultural">Cultural</option>
+                    <option value="deportiva">Deportiva</option>
+                    <option value="academica">Academica</option>
+                  </select>
+                </label>
+                <label className="field"><span>Lugar</span><input value={form.activityLocation} onChange={(e) => setForm((p) => ({ ...p, activityLocation: e.target.value }))} placeholder="Patio central, coliseo, etc." /></label>
+                <label className="field"><span>Fecha de actividad</span><input type="datetime-local" value={form.activityDate} onChange={(e) => setForm((p) => ({ ...p, activityDate: e.target.value }))} /></label>
+                <label className="field"><span>Fecha de publicacion</span><input type="datetime-local" value={form.activityPublishAt} onChange={(e) => setForm((p) => ({ ...p, activityPublishAt: e.target.value }))} /></label>
+                <label className="field">
+                  <span>Adjuntos multimedia (imagenes, videos, audios)</span>
+                  <input
+                    name="activityAttachments"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                    onChange={handleActivityDraftFilesChange}
+                  />
+                </label>
+                <ActivityFilePreviewList files={activityDraftFiles} onRemove={removeActivityDraftFile} />
                 <LoadingButton className="btn" loading={creatingActivityLoading} type="submit">Guardar actividad</LoadingButton>
               </form>
             </Card>
 
-            {createdActivityId && (
-              <Card title="Subir imagen de la actividad" subtitle={`Imagen de portada para actividad ${createdActivityId.substring(0, 8)}`}>
-                <form className="stack gap-sm" onSubmit={uploadImageToActivity}>
+            {createdActivity && (
+              <Card title="Adjuntos de la actividad" subtitle={`Actividad ${createdActivity.id.substring(0, 8)}`}>
+                <form className="stack gap-sm" onSubmit={uploadActivityAttachments}>
                   <label className="field">
-                    <span>Imagen de portada</span>
-                    <input name="activityImage" type="file" accept="image/*" />
+                    <span>Nuevos archivos multimedia</span>
+                    <input
+                      name="activityAttachment"
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+                      onChange={handleActivityAttachmentFilesChange}
+                    />
                   </label>
-                  <LoadingButton className="btn" loading={uploadingActivityImageLoading} type="submit">Subir portada</LoadingButton>
-                  <button className="btn btn--ghost" type="button" onClick={() => setCreatedActivityId('')}>Saltar</button>
+                  <label className="field">
+                    <span>Descripcion opcional</span>
+                    <input name="activityAttachmentCaption" type="text" placeholder="Se aplicara a todos los archivos seleccionados" />
+                  </label>
+                  <ActivityFilePreviewList files={activityAttachmentFiles} onRemove={removeActivityAttachmentFile} />
+                  <div className="admin-actions">
+                    <LoadingButton className="btn" loading={uploadingActivityAttachmentLoading} type="submit">Agregar adjuntos</LoadingButton>
+                    <button className="btn btn--ghost" type="button" onClick={() => setCreatedActivity(null)}>Finalizar</button>
+                  </div>
                 </form>
+                {(() => {
+                  const media = splitActivityMedia(createdActivity)
+                  const allAttachments = [...media.images, ...media.videos, ...media.audios, ...media.documents]
+                  if (!allAttachments.length) return <p className="state-empty">Aun no hay adjuntos en esta actividad.</p>
+                  return (
+                    <div className="news-draft-manager__list">
+                      {allAttachments.map((attachment) => (
+                        <div key={attachment.id || attachment.url} className="news-draft-item">
+                          {attachment.kind === 'image' ? (
+                            <div className="news-draft-item__thumb"><img src={attachment.url} alt={attachment.caption || attachment.filename} /></div>
+                          ) : (
+                            <div className="news-draft-item__thumb news-draft-item__thumb--doc"><strong>{attachment.kind.toUpperCase()}</strong></div>
+                          )}
+                          <div className="news-draft-item__body">
+                            <strong>{attachment.filename}</strong>
+                            <small>{attachment.caption || attachment.content_type || attachment.kind}</small>
+                          </div>
+                          <a className="btn btn--ghost btn--small" href={attachment.url} target="_blank" rel="noreferrer">Abrir</a>
+                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachment(createdActivity.id, attachment.id)}>Borrar</button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </Card>
             )}
           </div>
@@ -1949,6 +2237,7 @@ export default function App() {
           <SectionButton
             key={item.id}
             active={activeSection === item.id}
+            iconId={item.id}
             onClick={() => {
               goToSection(item.id)
             }}
@@ -2018,7 +2307,7 @@ export default function App() {
                          <div>
                            <strong>{item.title}</strong>
                            <p>{item.content}</p>
-                           <small>{item.audience || 'all'}</small>
+                            <small>{item.audience || 'all'} • {formatDateTime(item.end_at || item.created_at)}</small>
                          </div>
                        </div>
                      ))}
@@ -2083,6 +2372,7 @@ export default function App() {
                   <Card key={item.id} title={item.title} subtitle={item.audience || 'all'}>
                     <p>{item.content}</p>
                     {item.created_by_name && <small className="notice-creator">Creador: {item.created_by_name}</small>}
+                    <small>Publicado: {formatDateTime(item.created_at)}</small>
                     {item.end_at && <small>Vence: {formatDate(item.end_at)}</small>}
                     {token && (roleLabel === 'ADMIN' || item.created_by === userId) && (
                       <div className="admin-actions" style={{ marginTop: '12px' }}>
@@ -2200,9 +2490,29 @@ export default function App() {
               <div className="grid grid--3">
                 {filteredActivities.map((item) => (
                   <Card key={item.id} title={item.title} subtitle={item.activity_type || 'Actividad'}>
+                    {(() => {
+                      const media = splitActivityMedia(item)
+                      const firstImage = media.images[0]
+                      const firstVideo = media.videos[0]
+                      const firstAudio = media.audios[0]
+                      return (
+                        <div className="activity-media-stack">
+                          {firstImage ? (
+                            <div className="activity-media-preview"><img src={firstImage.url} alt={firstImage.caption || firstImage.filename || item.title} /></div>
+                          ) : null}
+                          {firstVideo ? (
+                            <video className="activity-media-player" controls preload="metadata" src={firstVideo.url} />
+                          ) : null}
+                          {firstAudio ? (
+                            <audio className="activity-media-player" controls preload="metadata" src={firstAudio.url} />
+                          ) : null}
+                        </div>
+                      )
+                    })()}
                     <p>{item.description}</p>
                     {item.location ? <small>{item.location}</small> : null}
-                    {item.date ? <small>{formatDate(item.date)}</small> : null}
+                    {item.date ? <small>Evento: {formatDateTime(item.date)}</small> : null}
+                    {item.publish_at ? <small>Publicado: {formatDateTime(item.publish_at)}</small> : null}
                   </Card>
                 ))}
               </div>
@@ -2292,7 +2602,7 @@ export default function App() {
 
             {canOpenAdminPanel ? (
               <AppErrorBoundary title="Panel de administración" subtitle="No se pudo cargar la vista">
-                <AdminPanel token={token} profile={profile} history={history} refreshPublic={reload} onTokenMissing={handleLogout} />
+                <AdminPanel token={token} roleLabel={roleLabel} profile={profile} history={history} refreshPublic={reload} onTokenMissing={handleLogout} />
               </AppErrorBoundary>
             ) : (
               <Card title="Acceso restringido" subtitle="Permisos por rol">
@@ -2309,7 +2619,7 @@ export default function App() {
 
       <footer className="footer">
         <div><strong>Dirección:</strong> {profile?.address || 'San Juan de Yapacaní, Bolivia'}</div>
-        <div><strong>Correo:</strong> {profile?.email || 'sagradocorazon4@ue.edu.bo'}</div>
+        <div><strong>Correo:</strong> uesagradocorazon4@gmail.com</div>
         <div><strong>Teléfono:</strong> {profile?.phone || '+591 3 1234567'}</div>
       </footer>
     </div>

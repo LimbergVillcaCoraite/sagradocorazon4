@@ -61,6 +61,8 @@ async def on_startup():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
         await conn.execute(text("ALTER TABLE site_profile ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR"))
+        await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS attachments_json TEXT"))
+        await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP"))
     # seed roles and admin user
     from sqlmodel.ext.asyncio.session import AsyncSession as SQLAsyncSession
     async with SQLAsyncSession(engine) as session:
