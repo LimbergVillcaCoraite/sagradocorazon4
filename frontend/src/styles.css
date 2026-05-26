@@ -297,9 +297,11 @@ textarea { resize: vertical; min-height: 100px; }
     radial-gradient(circle at top right, rgba(245,158,11,0.48), transparent 42%);
 }
 
-.admin-grid { display: grid; gap: 18px; }
+.admin-grid { display: grid; gap: 32px; }
 .admin-layout {
-  grid-template-columns: 300px minmax(0, 1fr);
+  /* wider drawer + larger gap to avoid any overlap */
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+  column-gap: 36px;
   align-items: start;
 }
 .admin-drawer {
@@ -307,17 +309,43 @@ textarea { resize: vertical; min-height: 100px; }
   gap: 14px;
   position: sticky;
   top: 18px;
-  /* ensure drawer stays within its column and doesn't overlay forms; allow workspace to sit above if needed */
-  z-index: 1;
+  /* keep drawer inside the left column and allow it to scroll internally */
+  z-index: 0; /* workspace should render above */
   max-height: calc(100vh - 36px);
   overflow: auto;
+  background-clip: padding-box;
 }
 .admin-workspace {
   display: grid;
   gap: 18px;
   position: relative;
-  z-index: 2; /* render workspace above drawer in case of unexpected overlap */
+  z-index: 1; /* keep workspace above the drawer */
+  min-width: 0; /* allow proper truncation */
+  min-width: 560px; /* prevent narrow workspace that gets hidden under drawer */
 }
+/* visual separator so forms are clearly readable and not under the drawer */
+.admin-workspace {
+  padding-left: 16px;
+  border-left: 1px solid rgba(148,163,184,0.06);
+}
+
+/* drawer-specific card tweaks: lighter, compact cards so they don't visually cover workspace */
+.admin-drawer .card {
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+  border: 1px solid rgba(148,163,184,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,252,255,0.96));
+}
+
+/* make sure inputs inside drawer don't overflow the column */
+.admin-drawer input, .admin-drawer select, .admin-drawer textarea { max-width: 100%; }
+
+@media (max-width: 1200px) {
+  .admin-layout { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); column-gap: 24px; }
+  .admin-workspace { min-width: 0; }
+}
+
 .admin-note { padding: 16px 18px; }
 .admin-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .admin-tabs {

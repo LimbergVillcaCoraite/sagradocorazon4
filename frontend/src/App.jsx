@@ -729,6 +729,13 @@ function AdminPanel({ token, profile, history, refreshPublic, onTokenMissing }) 
   const [activeAdminSection, setActiveAdminSection] = useState(() => localStorage.getItem('school-admin-section') || 'overview')
   const [profileForm, setProfileForm] = useState(defaultProfile)
   const [historyContent, setHistoryContent] = useState('')
+  // search state for admin drawer (filter sections)
+  const [adminSearch, setAdminSearch] = useState('')
+  const filteredAdminSections = useMemo(() => {
+    const term = (adminSearch || '').trim().toLowerCase()
+    if (!term) return adminSections
+    return adminSections.filter((s) => (s.label || s.id || '').toLowerCase().includes(term))
+  }, [adminSearch])
   const [form, setForm] = useState(defaultContentForm)
   const [createdNews, setCreatedNews] = useState(null)
   const [newsDraftFiles, setNewsDraftFiles] = useState([])
