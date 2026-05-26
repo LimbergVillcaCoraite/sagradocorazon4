@@ -823,6 +823,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
     if (!term) return adminSections
     return adminSections.filter((s) => (s.label || s.id || '').toLowerCase().includes(term))
   }, [adminSearch])
+  const visibleAdminSections = filteredAdminSections.length ? filteredAdminSections : adminSections
   const [form, setForm] = useState(defaultContentForm)
   const [createdNews, setCreatedNews] = useState(null)
   const [newsDraftFiles, setNewsDraftFiles] = useState([])
@@ -1604,6 +1605,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           <div className="admin-quick-actions">
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('noticias')}>Nueva noticia</button>
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('avisos')}>Crear aviso</button>
+            <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('actividades')}>Nueva actividad</button>
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('galeria')}>Nueva galería</button>
           </div>
 
@@ -1618,14 +1620,14 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
             <label className="field">
               <span>Ir a sección</span>
               <select value={activeAdminSection} onChange={(e) => navigateAdminSection(e.target.value)}>
-                {filteredAdminSections.map((section) => (
+                {visibleAdminSections.map((section) => (
                   <option key={section.id} value={section.id}>{section.label}</option>
                 ))}
               </select>
             </label>
           </div>
           <nav className="admin-tabs admin-nav-desktop" aria-label="Secciones de administración">
-            {filteredAdminSections.map((section) => (
+            {visibleAdminSections.map((section) => (
               <button
                 key={section.id}
                 type="button"
