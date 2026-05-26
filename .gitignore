@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+env/
+.venv/
+venv/
+*.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+dist/
+node_modules/
+
+# VSCode / JetBrains
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.egg-info/
+build/
+coverage/
+
