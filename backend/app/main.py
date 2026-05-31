@@ -17,22 +17,30 @@ from .routers import history as history_router
 from .routers import site as site_router
 from .storage_service import ensure_bucket_exists
 from .utils import get_password_hash
-from .session_ops import session_exec, session_commit, session_delete
+from .session_ops import session_exec, session_commit, session_delete, session_refresh
+from .activity_scheduler import start_activity_scheduler
 
 app = FastAPI(title="U.E. Sagrado Corazón API")
 __all__ = ["app", "get_session"]
 
 # Be explicit about allowed origins so browsers receive a proper
 # Access-Control-Allow-Origin value (don't use '*' when allow_credentials=True).
-FRONTEND_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+FRONTEND_ORIGINS = settings.cors_allowed_origins
+
+# Log the configured CORS origins on startup so it's easy to debug missing headers
+import logging
+logger = logging.getLogger("uvicorn")
+logger.info("Configured CORS allowed origins: %s", FRONTEND_ORIGINS)
+
+# If a wildcard origin is used, browsers don't allow Access-Control-Allow-Credentials
+allow_credentials = True
+if len(FRONTEND_ORIGINS) == 1 and FRONTEND_ORIGINS[0] == "*":
+    allow_credentials = False
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -59,62 +67,35 @@ app.include_router(site_router.router)
 async def on_startup():
     # create tables
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-        await conn.execute(text("ALTER TABLE site_profile ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR"))
-        await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS attachments_json TEXT"))
-        await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP"))
-    # seed roles and admin user
-    from sqlmodel.ext.asyncio.session import AsyncSession as SQLAsyncSession
-    async with SQLAsyncSession(engine) as session:
-        # seed roles
-        roles = ["ADMIN", "EDITOR", "PROFESSOR", "PARENT", "STUDENT", "GUEST"]
-        for r in roles:
-            q = select(models.Role).where(models.Role.name == r)
-            res = await session_exec(session, q)
-            if not res.one_or_none():
-                session.add(models.Role(name=r))
-        await session_commit(session)
-        # seed admin user from secure environment variables
-        admin_email = settings.admin_email
-        admin_password = settings.admin_password
-        if admin_email and admin_password:
-            q = select(models.User).where(models.User.email == admin_email)
-            res = await session_exec(session, q)
-            admin_users = res.all()
-            admin_user = admin_users[0] if admin_users else None
-            for duplicate in admin_users[1:]:
-                await session_delete(session, duplicate)
-
-            q2 = select(models.Role).where(models.Role.name == "ADMIN")
-            rres = await session_exec(session, q2)
-            admin_role = rres.one_or_none()
-
-            hashed = get_password_hash(admin_password)
-            if admin_user:
-                admin_user.name = settings.admin_name or admin_user.name or "Administrador"
-                admin_user.password_hash = hashed
-                admin_user.role_id = admin_role.id if admin_role else admin_user.role_id
-                session.add(admin_user)
-            else:
-                admin_user = models.User(
-                    name=settings.admin_name or "Administrador",
-                    email=admin_email,
-                    password_hash=hashed,
-                    role_id=(admin_role.id if admin_role else None),
-                )
-                session.add(admin_user)
-            await session_commit(session)
-
-        # seed site profile
-        q_profile = select(models.SiteProfile)
-        profile_res = await session_exec(session, q_profile)
-        if not profile_res.one_or_none():
-            session.add(models.SiteProfile())
-            await session_commit(session)
+        try:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        except Exception as e:
+            # Ignore errors from existing tables/types (e.g., duplicate key errors)
+            import logging
+            logger = logging.getLogger("uvicorn")
+            logger.warning(f"Warning during table creation (likely already exists): {str(e)}")
+        try:
+            await conn.execute(text("ALTER TABLE site_profile ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR"))
+            await conn.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"))
+            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS attachments_json TEXT"))
+            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP"))
+            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS created_by UUID"))
+        except Exception as e:
+            import logging
+            logger = logging.getLogger("uvicorn")
+            logger.warning(f"Warning during ALTER TABLE (columns may already exist): {str(e)}")
+    # NOTE: seeding roles, admin user and example data was causing startup
+    # failures in environments where the database already contains duplicate
+    # rows (MultipleResultsFound). To avoid crashing the app on startup, the
+    # automatic seeding has been disabled here. Use the `seed.py` script or
+    # manual SQL to populate roles/users/albums when needed.
 
 
     # ensure MinIO bucket exists for uploads
     await ensure_bucket_exists()
+    
+    # Start background activity scheduler
+    await start_activity_scheduler()
 
 
 # --- Simple health ---

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -78,7 +78,17 @@ async def serialize_news(news: News, session: AsyncSession) -> NewsRead:
         content=news.content or '',
         cover_image=_public_url(news.cover_image),
         attachments=[
-            attachment.model_copy(update={"url": _public_url(attachment.url)})
+            # Normalize attachments: ensure url is public and adjust kind based on content_type
+            (attachment.model_copy(update={
+                "url": _public_url(attachment.url),
+                "kind": (
+                    "video" if (attachment.content_type or "").lower().startswith("video/") else (
+                        attachment.kind if (attachment.kind in {"image", "video", "audio", "document"}) else (
+                            (attachment.content_type.split("/", 1)[0] if attachment.content_type and "/" in attachment.content_type else "document")
+                        )
+                    )
+                )
+            }))
             for attachment in _load_attachments(news.attachments_json)
         ],
         status=news.status,
@@ -158,6 +168,7 @@ async def create_news(
     if not is_unique:
         raise HTTPException(status_code=400, detail="Slug already exists")
 
+    now = datetime.now().replace(tzinfo=None)
     news = News(
         title=news_data.title,
         slug=slug,
@@ -166,8 +177,8 @@ async def create_news(
         cover_image=news_data.cover_image,
         status=news_data.status or "draft",
         author_id=user_id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=now,
+        updated_at=now
     )
     session.add(news)
     await session_commit(session)
@@ -217,17 +228,19 @@ async def upload_news_attachment(
     for upfile in file:
         content = await upfile.read()
         file_path = generate_file_path(upfile.filename, prefix="news-attachments")
-        url = upload_file(file_path, content, upfile.content_type or "application/octet-stream")
+        url = await upload_file(file_path, content, upfile.content_type or "application/octet-stream")
 
+        ctype = upfile.content_type or "application/octet-stream"
+        kind = "image" if ctype.startswith("image/") else ("video" if ctype.startswith("video/") else "document")
         attachment = {
             "id": str(uuid4()),
             "url": url,
             "storage_path": file_path,
             "filename": upfile.filename,
-            "content_type": upfile.content_type or "application/octet-stream",
-            "kind": "image" if (upfile.content_type or "").startswith("image/") else "document",
+            "content_type": ctype,
+            "kind": kind,
             "caption": caption,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now().replace(tzinfo=None).isoformat(),
         }
         attachments.append(attachment)
         # set cover image if none and file is an image (first image wins)
@@ -235,7 +248,7 @@ async def upload_news_attachment(
             news.cover_image = url
 
     news.attachments_json = json.dumps(attachments)
-    news.updated_at = datetime.utcnow()
+    news.updated_at = datetime.now().replace(tzinfo=None)
     session.add(news)
     await session_commit(session)
     await session_refresh(session, news)
@@ -280,7 +293,7 @@ async def delete_news_attachment(
 
     storage_path = getattr(target, 'storage_path', None) or _storage_path_from_url(target.url)
     if storage_path:
-        delete_file(storage_path)
+        await delete_file(storage_path)
 
     remaining = [attachment for attachment in attachments if attachment.id != attachment_id]
     news.attachments_json = json.dumps([attachment.model_dump(mode="json") for attachment in remaining])
@@ -288,7 +301,7 @@ async def delete_news_attachment(
         next_image = next((attachment.url for attachment in remaining if attachment.kind == "image"), None)
         news.cover_image = next_image
 
-    news.updated_at = datetime.utcnow()
+    news.updated_at = datetime.now().replace(tzinfo=None)
     session.add(news)
     await session_commit(session)
     await session_refresh(session, news)
@@ -340,7 +353,7 @@ async def update_news(
     if news_data.status:
         news.status = news_data.status
 
-    news.updated_at = datetime.utcnow()
+    news.updated_at = datetime.now().replace(tzinfo=None)
     session.add(news)
     await session_commit(session)
     await session_refresh(session, news)
@@ -361,7 +374,7 @@ async def publish_news(
         raise HTTPException(status_code=404, detail="News not found")
 
     news.status = "published"
-    news.updated_at = datetime.utcnow()
+    news.updated_at = datetime.now().replace(tzinfo=None)
     session.add(news)
     await session_commit(session)
     await session_refresh(session, news)

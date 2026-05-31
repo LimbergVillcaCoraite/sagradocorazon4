@@ -86,15 +86,6 @@ class ActivityCreate(BaseModel):
     publish_at: Optional[datetime] = None
     activity_type: Optional[str] = None  # deportiva | cultural | academica
 
-class ActivityUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    date: Optional[datetime] = None
-    location: Optional[str] = None
-    cover_image: Optional[str] = None
-    publish_at: Optional[datetime] = None
-    activity_type: Optional[str] = None
-
 
 class ActivityAttachment(BaseModel):
     id: str
@@ -106,6 +97,21 @@ class ActivityAttachment(BaseModel):
     caption: Optional[str] = None
     created_at: datetime
 
+
+class ActivityUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[datetime] = None
+    location: Optional[str] = None
+    cover_image: Optional[str] = None
+    publish_at: Optional[datetime] = None
+    activity_type: Optional[str] = None
+    # Allow passing the full attachments list when updating an activity.
+    # The client can upload new files via the attachments upload endpoint and
+    # then send the updated attachments array here (with ids/urls/captions).
+    attachments: Optional[list] = None
+
+
 class ActivityRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -114,9 +120,11 @@ class ActivityRead(BaseModel):
     date: Optional[datetime]
     location: Optional[str]
     cover_image: Optional[str]
-    attachments: List[ActivityAttachment] = Field(default_factory=list)
+    attachments: list = Field(default_factory=list)
     publish_at: Optional[datetime]
     activity_type: Optional[str]
+    created_by: Optional[UUID] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
 
 # Pagination

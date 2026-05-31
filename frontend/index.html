@@ -4,6 +4,38 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>U.E. Sagrado Corazón</title>
+    <!-- Inline debug overlay: captures uncaught errors and unhandled promise rejections
+         and renders them visibly on the page so you can copy the message if the
+         app UI goes blank. Remove this in production once the issue is fixed. -->
+    <style>
+      #error-overlay{position:fixed;left:12px;right:12px;top:12px;z-index:99999;padding:14px;border-radius:8px;background:#fff2f2;border:1px solid #ffb3b3;color:#700;box-shadow:0 6px 24px rgba(0,0,0,.12);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:none}
+      #error-overlay pre{white-space:pre-wrap;max-height:60vh;overflow:auto;margin:8px 0 0;font-size:12px}
+      #error-overlay button{margin-left:8px}
+    </style>
+    <script>
+      (function(){
+        function show(msg){
+          try{
+            var el=document.getElementById('error-overlay');
+            if(!el){
+              el=document.createElement('div');el.id='error-overlay';
+              el.innerHTML='<strong>JavaScript error detectado — copia este texto y pégalo en el chat</strong>'+
+                '<div style="margin-top:8px"><button id="error-overlay-hide">Ocultar</button> <button id="error-overlay-copy">Copiar al portapapeles</button></div>'+
+                '<pre id="error-overlay-text"></pre>';
+              document.body.appendChild(el);
+              document.getElementById('error-overlay-hide').addEventListener('click',function(){el.style.display='none'});
+              document.getElementById('error-overlay-copy').addEventListener('click',function(){var t=document.getElementById('error-overlay-text').innerText;navigator.clipboard&&navigator.clipboard.writeText(t)});
+            }
+            document.getElementById('error-overlay-text').innerText=msg;
+            el.style.display='block';
+          }catch(e){/* ignore */}
+        }
+        window.addEventListener('error',function(e){var m=(e&&e.message?e.message:'Error desconocido')+"\n"+(e&&e.error&&e.error.stack?e.error.stack:'(sin stack)');show(m)});
+        window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;var m=(r&&r.message?r.message:JSON.stringify(r))+'\n'+(r&&r.stack?r.stack:'(sin stack)');show('UnhandledRejection: '+m)});
+        // Expose helper so you can trigger a message from console if needed
+        window.__showFrontendErrorOverlay = show;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

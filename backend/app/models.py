@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4, UUID
 from pydantic import ConfigDict
 
@@ -13,6 +13,7 @@ class User(SQLModel, table=True):
     name: str
     email: str
     password_hash: str
+    avatar_url: Optional[str] = None
     role_id: Optional[UUID] = Field(default=None, foreign_key="role.id")
 
 class News(SQLModel, table=True):
@@ -26,8 +27,8 @@ class News(SQLModel, table=True):
     status: str = "draft"  # draft|published
     publish_at: Optional[datetime] = None
     author_id: Optional[UUID] = Field(default=None, foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
 
 class Notice(SQLModel, table=True):
     model_config = ConfigDict(extra="allow")
@@ -40,7 +41,7 @@ class Notice(SQLModel, table=True):
     end_at: Optional[datetime] = None
     pinned: bool = False
     created_by: Optional[UUID] = Field(default=None, foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     # Relationship to get creator details
     creator: Optional["User"] = Relationship(back_populates=None)
 
@@ -52,9 +53,11 @@ class Activity(SQLModel, table=True):
     location: Optional[str] = None
     cover_image: Optional[str] = None
     attachments_json: Optional[str] = None
-    publish_at: Optional[datetime] = None
+    created_by: Optional[UUID] = Field(default=None, foreign_key="user.id")
+    # default publish date should be current time when not provided (timezone-aware)
+    publish_at: Optional[datetime] = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     activity_type: Optional[str] = None  # deportiva|cultural|academica
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
 
 class Gallery(SQLModel, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
@@ -62,14 +65,22 @@ class Gallery(SQLModel, table=True):
     description: Optional[str] = None
     cover_image: Optional[str] = None
 
-class Image(SQLModel, table=True):
+class Album(SQLModel, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     gallery_id: Optional[UUID] = Field(default=None, foreign_key="gallery.id")
+    title: str
+    description: Optional[str] = None
+    cover_image: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
+
+class Image(SQLModel, table=True):
+    id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
+    album_id: Optional[UUID] = Field(default=None, foreign_key="album.id")
     url: str
     thumbnail_url: Optional[str] = None
     alt_text: Optional[str] = None
     uploaded_by: Optional[UUID] = Field(default=None, foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
 
 class PushSubscription(SQLModel, table=True):
     __tablename__ = "push_subscription"
@@ -81,7 +92,7 @@ class PushSubscription(SQLModel, table=True):
     auth: str
     expiration_time: Optional[str] = None
     active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
 
 class Notification(SQLModel, table=True):
     __tablename__ = "notification"
@@ -111,8 +122,8 @@ class GoogleCalendarToken(SQLModel, table=True):
     expiry: Optional[datetime] = None
     calendar_id: Optional[str] = None
     active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
 
 class SiteProfile(SQLModel, table=True):
     __tablename__ = "site_profile"
@@ -131,7 +142,7 @@ class SiteProfile(SQLModel, table=True):
     instagram_url: Optional[str] = None
     youtube_url: Optional[str] = None
     search_placeholder: Optional[str] = "Buscar noticias..."
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
 
 class History(SQLModel, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)

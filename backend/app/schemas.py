@@ -5,6 +5,8 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -15,8 +17,17 @@ class UserRead(BaseModel):
     id: str
     name: str
     email: EmailStr
+    avatar_url: Optional[str] = None
     role_id: Optional[str]
     role_name: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str

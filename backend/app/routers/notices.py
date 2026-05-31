@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 import logging
 
@@ -69,6 +69,22 @@ async def debug_last_notice(
         raise HTTPException(status_code=404, detail="No notices found")
     return await serialize_notice(notice, session)
 
+@router.get("/upcoming", response_model=List[NoticeRead])
+async def get_upcoming_notices(
+    limit: int = Query(3, ge=1, le=10),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get upcoming notices ordered by end_at date (closest to expiry first)."""
+    now = datetime.now().replace(tzinfo=None)  # Use naive datetime for database comparison
+    # Filter notices that haven't expired yet and have an end_at date
+    query = select(Notice).where(
+        (Notice.end_at.isnot(None)) & (Notice.end_at > now)
+    ).order_by(Notice.end_at.asc()).limit(limit)
+
+    result = await session_exec(session, query)
+    notices = result.all()
+    return [await serialize_notice(notice, session) for notice in notices]
+
 @router.get("", response_model=List[NoticeRead])
 async def list_notices(
     page: int = Query(1, ge=1),
@@ -78,7 +94,7 @@ async def list_notices(
     session: AsyncSession = Depends(get_session)
 ):
     """List notices with optional filtering. Excludes expired notices."""
-    now = datetime.utcnow()
+    now = datetime.now().replace(tzinfo=None)
     query = select(Notice).where(
         (Notice.end_at.is_(None)) | (Notice.end_at > now)
     ).order_by(Notice.pinned.desc(), Notice.created_at.desc())
@@ -129,7 +145,7 @@ async def create_notice(
         audience=notice_data.audience,
         pinned=notice_data.pinned,
         created_by=user_id,
-        created_at=datetime.utcnow()
+        created_at=datetime.now().replace(tzinfo=None)  # Use naive datetime for database
     )
     # Assign optional fields separately
     if notice_data.end_at is not None:

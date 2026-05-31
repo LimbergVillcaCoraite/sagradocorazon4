@@ -92,7 +92,7 @@ async def google_callback(
                 token.refresh_token = token_payload["refresh_token"]
             token.expiry = expiry
             token.active = True
-            token.updated_at = datetime.utcnow()
+            token.updated_at = datetime.now(timezone.utc)
 
         session.add(token)
         await session_commit(session)
@@ -128,7 +128,7 @@ async def disconnect_google(
     if not token:
         raise HTTPException(status_code=404, detail="Google Calendar not connected")
     token.active = False
-    token.updated_at = datetime.utcnow()
+    token.updated_at = datetime.now(timezone.utc)
     session.add(token)
     await session_commit(session)
     return {"status": "disconnected"}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -25,7 +25,7 @@ def _default_profile() -> SiteProfile:
         phone="+591 3 1234567",
         email="sagradocorazon4@ue.edu.bo",
         search_placeholder="Buscar noticias...",
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -62,7 +62,7 @@ async def update_site_profile(
     for key, value in data.items():
         setattr(profile, key, value)
 
-    profile.updated_at = datetime.utcnow()
+    profile.updated_at = datetime.now(timezone.utc)
     session.add(profile)
     await session_commit(session)
     await session_refresh(session, profile)

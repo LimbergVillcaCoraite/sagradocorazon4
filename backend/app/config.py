@@ -29,6 +29,18 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _parse_origins(value: Optional[str]) -> list:
+    """Parse a semicolon or comma separated list of origins from env.
+    Returns a list of non-empty, stripped origin strings. If value is falsy,
+    the caller should fall back to defaults.
+    """
+    if not value:
+        return []
+    # Accept both ; and , as separators and strip whitespace
+    parts = [p.strip() for p in value.replace("\n", "").replace(",", ";").split(";")]
+    return [p for p in parts if p]
+
+
 @dataclass(slots=True)
 class Settings:
     database_url: str = field(default_factory=lambda: _env("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/sagradocorazon") or "")
@@ -45,6 +57,11 @@ class Settings:
     google_client_secret: Optional[str] = field(default_factory=lambda: _env("GOOGLE_CLIENT_SECRET"))
     google_redirect_uri: Optional[str] = field(default_factory=lambda: _env("GOOGLE_REDIRECT_URI"))
     secret_key: str = field(default_factory=lambda: os.getenv("SECRET_KEY", "change-me-in-production"))
+    
+    # CORS settings - can be overridden with CORS_ALLOWED_ORIGINS environment variable
+    cors_allowed_origins: list = field(default_factory=lambda: (
+        (_parse_origins(_env("CORS_ALLOWED_ORIGINS")) or ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost"])
+    ))
 
     # MinIO settings
     minio_endpoint: str = field(default_factory=lambda: os.getenv("MINIO_ENDPOINT", "localhost:9000"))

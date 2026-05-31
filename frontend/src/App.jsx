@@ -4,6 +4,25 @@ import './styles.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
 
+// Role display mapping: map internal role names (and Spanish labels) to a friendly Spanish label
+const ROLE_DISPLAY_MAP = {
+  STUDENT: 'Estudiante',
+  EDITOR: 'Editor',
+  PROFESSOR: 'Profesor',
+  ADMIN: 'Administrador',
+  PARENT: 'Padre',
+  GUEST: 'Invitado',
+  ESTUDIANTE: 'Estudiante',
+  PADRE: 'Padre',
+  INVITADO: 'Invitado',
+}
+
+function displayRole(role) {
+  if (!role) return ''
+  const key = String(role).trim().toUpperCase()
+  return ROLE_DISPLAY_MAP[key] || role
+}
+
 const navItems = [
   { id: 'inicio', label: 'Inicio' },
   { id: 'avisos', label: 'Avisos' },
@@ -11,8 +30,7 @@ const navItems = [
   { id: 'actividades', label: 'Actividades' },
   { id: 'galeria', label: 'Galería' },
   { id: 'historia', label: 'Historia' },
-  { id: 'acceso', label: 'Acceso' },
-  { id: 'admin', label: 'Admin' },
+  { id: 'contacto', label: 'Contacto' },
 ]
 
 function NavIcon({ sectionId }) {
@@ -31,6 +49,39 @@ function NavIcon({ sectionId }) {
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {icon}
     </svg>
+  )
+}
+
+function SocialIcon({ network }) {
+  if (network === 'facebook') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14 8.8h2.5l.5-2.8H14V4.6c0-.8.3-1.4 1.5-1.4H17V0h-2.1C12 0 11 1.4 11 3.7V6h-3v2.8h3V17h3V8.8z" fill="currentColor" />
+      </svg>
+    )
+  }
+  if (network === 'instagram') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.2A4.8 4.8 0 1 1 7.2 12 4.8 4.8 0 0 1 12 7.2zm0 2A2.8 2.8 0 1 0 14.8 12 2.8 2.8 0 0 0 12 9.2zM17.4 6.4a1 1 0 1 1-1 1 1 1 0 0 1 1-1z" fill="currentColor" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21.7 8.2a3 3 0 0 0-2.1-2.1C17.7 5.7 12 5.7 12 5.7s-5.7 0-7.6.4A3 3 0 0 0 2.3 8.2 31 31 0 0 0 2 12a31 31 0 0 0 .3 3.8 3 3 0 0 0 2.1 2.1C6.3 18.3 12 18.3 12 18.3s5.7 0 7.6-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.3-3.8zM10 15.1V8.9L15.2 12 10 15.1z" fill="currentColor" />
+    </svg>
+  )
+}
+
+function SchoolEmblem({ label = 'U.E. SAGRADO CORAZÓN 4' }) {
+  return (
+    <img
+      src="/escudo.jpg"
+      alt={label}
+      className="brand__emblem-svg"
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
   )
 }
 
@@ -76,10 +127,63 @@ const defaultContentForm = {
   googleEnd: '',
 }
 
-const defaultStudentForm = {
+const defaultLoginForm = {
   name: '',
   email: '',
   password: '',
+}
+
+function hashString(value = '') {
+  let hash = 0
+  const input = String(value)
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+function buildAvatarDataUrl(seed = 'usuario') {
+  const hash = hashString(seed || 'usuario')
+  const hue = hash % 360
+  const bg = `hsl(${hue}, 70%, 42%)`
+  const accent = `hsl(${(hue + 32) % 360}, 80%, 60%)`
+  const light = `hsl(${(hue + 180) % 360}, 35%, 96%)`
+  const pattern = []
+  let state = hash || 1
+  for (let i = 0; i < 15; i += 1) {
+    state = (state * 1664525 + 1013904223) >>> 0
+    pattern.push(state % 2 === 0)
+  }
+  const size = 64
+  const cell = size / 5
+  const rects = []
+  for (let row = 0; row < 5; row += 1) {
+    for (let col = 0; col < 3; col += 1) {
+      const active = pattern[row * 3 + col]
+      if (!active) continue
+      const x = col * cell
+      const y = row * cell
+      const mirrorX = (4 - col) * cell
+      rects.push(`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="6" fill="${col === 1 ? accent : light}" />`)
+      if (col !== 2) {
+        rects.push(`<rect x="${mirrorX}" y="${y}" width="${cell}" height="${cell}" rx="6" fill="${col === 1 ? accent : light}" />`)
+      }
+    }
+  }
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Avatar">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="${bg}" />
+          <stop offset="100%" stop-color="${accent}" />
+        </linearGradient>
+      </defs>
+      <rect width="${size}" height="${size}" rx="16" fill="url(#g)" />
+      ${rects.join('')}
+    </svg>
+  `
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
 const adminSections = [
@@ -93,6 +197,7 @@ const adminSections = [
   { id: 'notificaciones', label: 'Notificaciones', description: 'Enviar avisos a la comunidad.' },
   { id: 'google', label: 'Google Calendar', description: 'Sincronizar eventos con Google Calendar.' },
   { id: 'media', label: 'Subir imagen', description: 'Subida simple de imágenes y miniaturas.' },
+  { id: 'usuarios', label: 'Usuarios', description: 'Crear cuentas y asignar roles.' },
 ]
 
 function formatDate(value) {
@@ -139,14 +244,17 @@ function splitNewsMedia(item) {
     )
   }
   attachments.forEach((attachment) => {
-    pushAttachment({
-      ...attachment,
-      kind: attachment.kind || (attachment.content_type?.startsWith('image/') ? 'image' : 'document'),
-    })
+    const ct = attachment.content_type || ''
+    const inferredKind = attachment.kind || (ct.startsWith('image/') ? 'image' : ct.startsWith('video/') ? 'video' : ct.startsWith('audio/') ? 'audio' : 'document')
+    pushAttachment({ ...attachment, kind: inferredKind })
   })
+
   const unique = Array.from(uniqueByUrl.values())
   return {
+    all: unique,
     images: unique.filter((attachment) => attachment.kind === 'image'),
+    videos: unique.filter((attachment) => attachment.kind === 'video'),
+    audios: unique.filter((attachment) => attachment.kind === 'audio'),
     documents: unique.filter((attachment) => attachment.kind === 'document'),
   }
 }
@@ -185,28 +293,55 @@ function NewsImageCarousel({ images, title, compact = false }) {
     </div>
   )
 }
-// Grid of thumbnails showing all images for a news post.
-function NewsImagesGrid({ images, title, compact = false, onOpen }) {
-  if (!images.length) return null
-  const thumbSize = compact ? 90 : 140
+
+function MixedMediaCarousel({ items, title, compact = false }) {
+  const [activeIndex, setActiveIndex] = useState(0)
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [items.length, items[0]?.url, items[items.length - 1]?.url])
+  if (!items || !items.length) return null
+  const current = items[Math.min(activeIndex, items.length - 1)]
   return (
-    <div className={`news-post__images ${compact ? 'news-post__images--compact' : ''}`}>
-      {images.map((att, idx) => (
-        <button
-          key={att.id || `${att.url}-${idx}`}
-          type="button"
-          className="news-post__images__item"
-          onClick={(e) => { e.stopPropagation(); if (onOpen) onOpen() }}
-          aria-label={`Ver imagen ${idx + 1}`}
-        >
-          <img src={att.url} alt={att.caption || att.filename || title || `Imagen ${idx + 1}`} style={{ height: thumbSize }} />
-        </button>
-      ))}
+    <div className={`news-carousel ${compact ? 'news-carousel--compact' : ''}`}>
+      <div className="news-carousel__stage">
+        {current.kind === 'video' ? (
+          <video controls preload="metadata" src={current.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : current.kind === 'image' ? (
+          <img src={current.url} alt={current.caption || current.filename || title || 'Medio'} />
+        ) : current.kind === 'audio' ? (
+          <audio controls preload="metadata" src={current.url} style={{ width: '100%' }} />
+        ) : (
+          // fallback: show link preview for documents
+          <div style={{ padding: 18 }}>
+            <a href={current.url} target="_blank" rel="noreferrer">{current.filename || 'Abrir archivo'}</a>
+          </div>
+        )}
+        {items.length > 1 ? (
+          <>
+            <button type="button" className="news-carousel__nav news-carousel__nav--prev" onClick={() => setActiveIndex((prev) => (prev - 1 + items.length) % items.length)} aria-label="Anterior">‹</button>
+            <button type="button" className="news-carousel__nav news-carousel__nav--next" onClick={() => setActiveIndex((prev) => (prev + 1) % items.length)} aria-label="Siguiente">›</button>
+          </>
+        ) : null}
+      </div>
+      {items.length > 1 ? (
+        <div className="news-carousel__dots" aria-label="Selector de medios">
+          {items.map((attachment, index) => (
+            <button
+              key={attachment.id || `${attachment.url}-${index}`}
+              type="button"
+              className={`news-carousel__dot ${index === activeIndex ? 'active' : ''}`}
+              onClick={() => setActiveIndex(index)}
+              aria-label={`Ver medio ${index + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
+      {current.caption ? <p className="news-carousel__caption">{current.caption}</p> : null}
     </div>
   )
 }
 function NewsPostCard({ item, compact = false, onOpen, canEdit = false, onEdit }) {
-  const { images, documents } = useMemo(() => splitNewsMedia(item), [item])
+  const { all, documents } = useMemo(() => splitNewsMedia(item), [item])
   const text = item.excerpt || item.content || ''
   const initial = (item.author_name || item.title || 'N').trim().charAt(0).toUpperCase()
   const interactive = typeof onOpen === 'function'
@@ -235,13 +370,23 @@ function NewsPostCard({ item, compact = false, onOpen, canEdit = false, onEdit }
         </div>
       </header>
       {text ? <p className="news-post__content">{text}</p> : null}
-      {images.length ? (
-        images.length === 1 ? (
-          <div className="news-post__cover">
-            <img src={images[0].url} alt={images[0].caption || images[0].filename || item.title || 'Imagen de noticia'} />
-          </div>
+      {all && all.length ? (
+        all.length === 1 ? (
+          all[0].kind === 'image' ? (
+            <div className="news-post__cover">
+              <img src={all[0].url} alt={all[0].caption || all[0].filename || item.title || 'Imagen de noticia'} />
+            </div>
+          ) : all[0].kind === 'video' ? (
+            <div className="news-post__cover">
+              <video controls preload="metadata" src={all[0].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : (
+            <div className="news-post__cover">
+              <a href={all[0].url} target="_blank" rel="noreferrer">{all[0].filename || 'Abrir archivo'}</a>
+            </div>
+          )
         ) : (
-          <NewsImagesGrid images={images} title={item.title} compact={compact} onOpen={() => onOpen && onOpen(item)} />
+          <MixedMediaCarousel items={all} title={item.title} compact={compact} />
         )
       ) : null}
       {compact && text.length > 180 ? <small className="news-post__read-more">Haz clic para leer la noticia completa</small> : null}
@@ -278,15 +423,23 @@ function NewsFilePreviewList({ files, onRemove }) {
             <div className="news-preview-card__media">
               <img src={item.previewUrl} alt={item.file.name} />
             </div>
+          ) : item.kind === 'video' && item.previewUrl ? (
+            <div className="news-preview-card__media">
+              <video controls preload="metadata" src={item.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : item.kind === 'audio' && item.previewUrl ? (
+            <div className="news-preview-card__media news-preview-card__media--doc">
+              <audio controls preload="metadata" src={item.previewUrl} style={{ width: '100%' }} />
+            </div>
           ) : (
             <div className="news-preview-card__media news-preview-card__media--doc">
-              <strong>{item.file.name.split('.').pop()?.toUpperCase() || 'DOC'}</strong>
-              <span>Documento</span>
+              <strong>{item.kind.toUpperCase()}</strong>
+              <span>{item.file.name.split('.').pop()?.toUpperCase() || 'FILE'}</span>
             </div>
           )}
           <div className="news-preview-card__body">
             <strong>{item.file.name}</strong>
-            <small>{item.kind === 'image' ? 'Se mostrará como imagen' : 'Se adjuntará como archivo descargable'}</small>
+            <small>{item.kind === 'image' ? 'Se mostrará como imagen' : item.kind === 'video' ? 'Se mostrará como video' : item.kind === 'audio' ? 'Se mostrará como audio' : `Adjunto tipo ${item.kind}`}</small>
           </div>
           <button className="btn btn--ghost btn--small" type="button" onClick={() => onRemove(item.id)}>
             Quitar
@@ -298,7 +451,7 @@ function NewsFilePreviewList({ files, onRemove }) {
 }
 
 function NewsReadModal({ item, onClose, canEdit = false, onEdit }) {
-  const { images, documents } = useMemo(() => splitNewsMedia(item), [item])
+  const { all, documents } = useMemo(() => splitNewsMedia(item), [item])
   if (!item) return null
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -319,7 +472,19 @@ function NewsReadModal({ item, onClose, canEdit = false, onEdit }) {
               {item.created_by_name ? <small>Creador: {item.created_by_name}</small> : null}
             </div>
           </div>
-          {images.length ? <NewsImageCarousel images={images} title={item.title} /> : null}
+                          {all && all.length ? (
+                            all.length === 1 ? (
+                              all[0].kind === 'image' ? (
+                                <NewsImageCarousel images={[all[0]]} title={item.title} />
+                              ) : all[0].kind === 'video' ? (
+                                <div className="news-post__cover">
+                                  <video controls preload="metadata" src={all[0].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                              ) : null
+                            ) : (
+                              <MixedMediaCarousel items={all} title={item.title} />
+                            )
+                          ) : null}
           <div className="news-read-modal__content">{item.content ? <p>{item.content}</p> : null}</div>
           {documents.length ? (
             <div className="news-post__attachments">
@@ -433,6 +598,304 @@ function splitActivityMedia(item) {
   }
 }
 
+function getAlbumCoverUrl(album) {
+  const raw = album?.cover_image
+  if (!raw || typeof raw !== 'string') return ''
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed) && typeof parsed[0] === 'string') return parsed[0]
+    } catch {
+      // Fallback to raw value when it is not valid JSON.
+    }
+  }
+  return trimmed
+}
+
+function AlbumFeaturedCarousel({ albums, onOpen }) {
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    if (!albums.length) return undefined
+    const timer = window.setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % albums.length)
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [albums.length])
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [albums.length, albums[0]?.id])
+
+  if (!albums.length) return <p className="state-empty">No hay galerías registradas.</p>
+
+  const current = albums[Math.min(activeIndex, albums.length - 1)]
+  const cover = getAlbumCoverUrl(current)
+
+  return (
+    <div className="album-carousel">
+      <div
+        className="album-carousel__stage"
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpen?.(current)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onOpen?.(current)
+          }
+        }}
+      >
+        <div className="gallery-thumb album-carousel__thumb">
+          {cover ? <img src={cover} alt={`Portada de ${current.title}`} /> : <span className="gallery-thumb__placeholder">Sin portada</span>}
+        </div>
+        <div className="album-carousel__overlay">
+          <span className="album-carousel__badge">#{String(activeIndex + 1).padStart(2, '0')} / {String(albums.length).padStart(2, '0')}</span>
+          <strong>{current.title}</strong>
+          <small>{formatDateTime(current.created_at)} • {current.images_count || 0} imágenes</small>
+        </div>
+      </div>
+      <div className="album-carousel__controls" aria-hidden="true">
+        <span className="album-carousel__dots">
+          {albums.map((album, index) => (
+            <span key={album.id} className={`album-carousel__dot ${index === activeIndex ? 'active' : ''}`} />
+          ))}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AlbumViewerModal({ album, onClose }) {
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [brokenImages, setBrokenImages] = useState({})
+
+  useEffect(() => {
+    if (!album) return undefined
+    let alive = true
+    setLoadingDetail(true)
+    setDetail(null)
+    setActiveIndex(0)
+    setBrokenImages({})
+    api(`/albums/${album.id}`)
+      .then((data) => {
+        if (!alive) return
+        setDetail(data)
+      })
+      .catch(() => {
+        if (!alive) return
+        setDetail(album)
+      })
+      .finally(() => {
+        if (alive) setLoadingDetail(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [album])
+
+  if (!album) return null
+
+  const images = Array.isArray(detail?.images) ? detail.images : Array.isArray(album.images) ? album.images : []
+  const visibleImages = images.filter((img, idx) => !brokenImages[img?.id || idx])
+  const safeIndex = Math.min(activeIndex, Math.max(visibleImages.length - 1, 0))
+  const current = visibleImages[safeIndex]
+  const currentSrc = current?.thumbnail_url || current?.url || ''
+  const handleImageError = (image, idx) => {
+    setBrokenImages((prev) => ({ ...prev, [image?.id || idx]: true }))
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <article className="card album-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="card__header">
+          <div>
+            <h3>{detail?.title || album.title}</h3>
+            <span>{formatDateTime(detail?.created_at || album.created_at)} • {images.length} fotos</span>
+          </div>
+          <div className="admin-actions">
+            <button type="button" className="btn btn--ghost btn--small" onClick={onClose}>Cerrar</button>
+          </div>
+        </div>
+        <div className="card__body album-modal__body">
+          {loadingDetail ? (
+            <LoadingState message="Cargando fotos del álbum..." />
+          ) : images.length ? (
+            <>
+              <div className="album-viewer__main">
+                {currentSrc ? (
+                  <img
+                    src={currentSrc}
+                    alt={current?.alt_text || detail?.title || album.title}
+                    className="album-viewer__image"
+                    onError={() => handleImageError(current, safeIndex)}
+                  />
+                ) : (
+                  <div className="album-viewer__empty">
+                    <span className="gallery-thumb__placeholder">Imagen no disponible</span>
+                  </div>
+                )}
+                <div className="album-carousel__overlay album-carousel__overlay--modal">
+                  <span className="album-carousel__badge">#{String(activeIndex + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}</span>
+                  <strong>{current?.alt_text || current?.title || detail?.title || album.title}</strong>
+                  <small>{formatDateTime(current?.created_at || detail?.created_at || album.created_at)} • {images.length} imágenes</small>
+                </div>
+              </div>
+
+              <div className="album-viewer__thumbs" aria-label="Miniaturas del álbum">
+                {images.map((image, index) => {
+                  const thumbSrc = image.thumbnail_url || image.url
+                  return (
+                    <button
+                      key={image.id || index}
+                      type="button"
+                      className={`album-viewer__thumb ${index === activeIndex ? 'active' : ''}`}
+                      onClick={() => setActiveIndex(index)}
+                      aria-label={`Ver imagen ${index + 1}`}
+                    >
+                      {thumbSrc ? (
+                        <img
+                          src={thumbSrc}
+                          alt={image.alt_text || `Miniatura ${index + 1}`}
+                          onError={() => handleImageError(image, index)}
+                        />
+                      ) : (
+                        <span className="gallery-thumb__placeholder">Sin imagen</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="album-viewer__all" aria-label="Todas las fotos del álbum">
+                {images.map((image, index) => {
+                  const fullSrc = image.url || image.thumbnail_url
+                  return (
+                    <button
+                      key={`all-${image.id || index}`}
+                      type="button"
+                      className={`album-viewer__all-item ${index === activeIndex ? 'active' : ''}`}
+                      onClick={() => setActiveIndex(index)}
+                      aria-label={`Abrir imagen ${index + 1}`}
+                    >
+                      {fullSrc ? <img src={fullSrc} alt={image.alt_text || `Foto ${index + 1}`} onError={() => handleImageError(image, index)} /> : <span className="gallery-thumb__placeholder">Sin imagen</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="album-collage album-collage--loading">
+              <span className="gallery-thumb__placeholder">Sin fotos en este álbum</span>
+            </div>
+          )}
+        </div>
+
+        {images.length > 1 ? (
+          <div className="album-carousel__controls album-carousel__controls--modal">
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setActiveIndex((prev) => (prev - 1 + images.length) % images.length)}>Anterior</button>
+            <div className="album-carousel__dots">
+              {images.map((image, index) => (
+                <button key={image.id || index} type="button" className={`album-carousel__dot ${index === activeIndex ? 'active' : ''}`} onClick={() => setActiveIndex(index)} aria-label={`Ver imagen ${index + 1}`} />
+              ))}
+            </div>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setActiveIndex((prev) => (prev + 1) % images.length)}>Siguiente</button>
+          </div>
+        ) : null}
+      </article>
+    </div>
+  )
+}
+
+function GalleryCard({ item, onOpen }) {
+  const [images, setImages] = useState([])
+  const [isHoverLoading, setIsHoverLoading] = useState(false)
+  const cover = getAlbumCoverUrl(item)
+  const openAlbum = onOpen || item?.onOpen
+  const isClickable = typeof openAlbum === 'function'
+
+  // Lazy-load album images when the user hovers (or focuses) the album card.
+  // This avoids loading many album thumbnails up front and only fetches
+  // images if the album has no explicit cover and there are images.
+  const [loadedOnHover, setLoadedOnHover] = useState(false)
+
+  const handleMouseEnter = () => {
+    if (cover || loadedOnHover || !(item.images_count > 0)) return
+    setLoadedOnHover(true)
+    setIsHoverLoading(true)
+    api(`/albums/${item.id}`).then((data) => {
+      const imgs = Array.isArray(data.images) ? data.images : []
+      setImages(imgs)
+      // Preload the first few images to make the collage appear smoothly
+      imgs.slice(0, 6).forEach((img) => {
+        try {
+          const im = new Image()
+          im.src = img.url || img
+        } catch (e) {
+          // ignore preload errors
+        }
+      })
+    }).catch(() => {}).finally(() => {
+      setIsHoverLoading(false)
+    })
+  }
+
+  return (
+    <Card
+      className={`album-card ${isClickable ? 'album-card--clickable' : ''}`}
+      title={item.title}
+      subtitle={`${item.images_count || 0} imágenes`}
+      onMouseEnter={handleMouseEnter}
+      onFocus={handleMouseEnter}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={isClickable ? () => openAlbum(item) : undefined}
+      onKeyDown={isClickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openAlbum(item)
+        }
+      } : undefined}
+    >
+      <div className="gallery-thumb">
+        {cover ? (
+          <img src={cover} alt={`Portada de ${item.title}`} />
+        ) : images.length ? (
+          <div className="album-collage" aria-hidden>
+            {images.slice(0, 4).map((img, idx) => (
+              <img key={idx} src={img.url || img} alt="" className={`album-collage__img album-collage__img--${idx}`} />
+            ))}
+          </div>
+        ) : isHoverLoading ? (
+          <div className="album-collage album-collage--loading" aria-hidden>
+            <span className="gallery-thumb__placeholder">Cargando fotos...</span>
+          </div>
+        ) : (
+          <div className="gallery-thumb__empty">
+            <span className="gallery-thumb__placeholder">Sin portada</span>
+          </div>
+        )}
+      </div>
+      <div className="card__meta">
+        <p className="muted small">{item.description || 'Álbum institucional actualizado desde la base de datos.'}</p>
+        <div style={{ marginTop: 8 }}>
+          {item.created_by_name ? <small className="muted">Creador: {item.created_by_name}</small> : null}
+          <small className="muted" style={{ display: 'block' }}>Creado: {formatDateTime(item.created_at)}</small>
+        </div>
+        {openAlbum ? (
+          <button type="button" className="btn btn--ghost btn--small album-card__open" onClick={(e) => { e.stopPropagation(); openAlbum(item) }}>
+            Ver fotos
+          </button>
+        ) : null}
+      </div>
+    </Card>
+  )
+}
+
 function ActivityFilePreviewList({ files, onRemove }) {
   if (!files.length) return null
   return (
@@ -443,6 +906,14 @@ function ActivityFilePreviewList({ files, onRemove }) {
             <div className="news-preview-card__media">
               <img src={item.previewUrl} alt={item.file.name} />
             </div>
+          ) : item.kind === 'video' && item.previewUrl ? (
+            <div className="news-preview-card__media">
+              <video controls preload="metadata" src={item.previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : item.kind === 'audio' && item.previewUrl ? (
+            <div className="news-preview-card__media news-preview-card__media--doc">
+              <audio controls preload="metadata" src={item.previewUrl} style={{ width: '100%' }} />
+            </div>
           ) : (
             <div className="news-preview-card__media news-preview-card__media--doc">
               <strong>{item.kind.toUpperCase()}</strong>
@@ -451,9 +922,11 @@ function ActivityFilePreviewList({ files, onRemove }) {
           )}
           <div className="news-preview-card__body">
             <strong>{item.file.name}</strong>
-            <small>{item.kind === 'image' ? 'Se mostrara como imagen' : `Adjunto tipo ${item.kind}`}</small>
+            <small>{item.kind === 'image' ? 'Se mostrará como imagen' : item.kind === 'video' ? 'Se mostrará como video' : item.kind === 'audio' ? 'Se mostrará como audio' : `Adjunto tipo ${item.kind}`}</small>
           </div>
-          <button className="btn btn--ghost btn--small" type="button" onClick={() => onRemove(item.id)}>Quitar</button>
+          <button className="btn btn--ghost btn--small" type="button" onClick={() => onRemove(item.id)}>
+            Quitar
+          </button>
         </div>
       ))}
     </div>
@@ -487,9 +960,9 @@ async function api(path, options = {}) {
   return response.json()
 }
 
-function Card({ title, subtitle, children, className = '' }) {
+function Card({ title, subtitle, children, className = '', ...props }) {
   return (
-    <article className={`card ${className}`}>
+    <article className={`card ${className}`} {...props}>
       <div className="card__header">
         <h3>{title}</h3>
         {subtitle ? <span>{subtitle}</span> : null}
@@ -585,6 +1058,7 @@ function usePublicData() {
     news: [],
     notices: [],
     activities: [],
+    albums: [],
     galleries: [],
     history: { content: '' },
     loading: true,
@@ -593,11 +1067,12 @@ function usePublicData() {
 
   const load = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, warning: null }))
-    const [profileRes, newsRes, noticesRes, activitiesRes, galleriesRes, historyRes] = await Promise.allSettled([
+    const [profileRes, newsRes, noticesRes, activitiesRes, albumsRes, galleriesRes, historyRes] = await Promise.allSettled([
       api('/site/profile'),
       api('/news?limit=100'),
       api('/notices?limit=100'),
       api('/activities?limit=100'),
+      api('/albums?limit=100'),
       api('/galleries?limit=100'),
       api('/history'),
     ])
@@ -607,16 +1082,20 @@ function usePublicData() {
       ['noticias', newsRes],
       ['avisos', noticesRes],
       ['actividades', activitiesRes],
+      ['álbumes', albumsRes],
       ['galerías', galleriesRes],
       ['historia', historyRes],
     ].filter(([, result]) => result.status === 'rejected').map(([name]) => name)
-    const successCount = 6 - failedSections.length
+    const successCount = 7 - failedSections.length
 
     setState({
       profile: profileRes.status === 'fulfilled' ? profileRes.value : null,
       news: newsRes.status === 'fulfilled' && Array.isArray(newsRes.value) ? newsRes.value : [],
       notices: noticesRes.status === 'fulfilled' && Array.isArray(noticesRes.value) ? noticesRes.value : [],
       activities: activitiesRes.status === 'fulfilled' && Array.isArray(activitiesRes.value) ? activitiesRes.value : [],
+      albums: albumsRes.status === 'fulfilled' && Array.isArray(albumsRes.value)
+        ? [...albumsRes.value].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        : [],
       galleries: galleriesRes.status === 'fulfilled' && Array.isArray(galleriesRes.value) ? galleriesRes.value : [],
       history: historyRes.status === 'fulfilled' && historyRes.value ? historyRes.value : { content: '' },
       loading: false,
@@ -633,6 +1112,7 @@ function usePublicData() {
         news: [],
         notices: [],
         activities: [],
+        albums: [],
         galleries: [],
         history: { content: '' },
         loading: false,
@@ -647,40 +1127,20 @@ function usePublicData() {
   return { ...state, reload: load }
 }
 
-function AuthPanel({ token, userLabel, roleLabel, onLogin, onLogout }) {
-  const [mode, setMode] = useState('login')
-  const [form, setForm] = useState(defaultStudentForm)
+function AuthPanel({ token, userLabel, roleLabel, avatarUrl, onLogin, onLogout, onOpenAdmin, onAvatarUpdated, compact = false }) {
+  const [form, setForm] = useState(defaultLoginForm)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [notifications, setNotifications] = useState([])
-  const [notificationsError, setNotificationsError] = useState('')
-  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarStatus, setAvatarStatus] = useState('')
+  const [avatarError, setAvatarError] = useState('')
+  const [avatarLoading, setAvatarLoading] = useState(false)
 
-  async function loadNotifications(accessToken = token) {
-    if (!accessToken) return
-    setNotificationsLoading(true)
-    setNotificationsError('')
-    try {
-      const data = await api('/notifications/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      setNotifications(Array.isArray(data) ? data : [])
-    } catch (err) {
-      setNotifications([])
-      setNotificationsError(err.message)
-    } finally {
-      setNotificationsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (token) {
-      loadNotifications(token)
-    } else {
-      setNotifications([])
-    }
-  }, [token])
+  const headerAvatar = useMemo(
+    () => avatarUrl || buildAvatarDataUrl(userLabel || roleLabel || 'usuario'),
+    [avatarUrl, userLabel, roleLabel],
+  )
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -688,25 +1148,12 @@ function AuthPanel({ token, userLabel, roleLabel, onLogin, onLogout }) {
     setError('')
     setStatus('')
     try {
-      if (mode === 'register') {
-        if (!form.name.trim()) {
-          setError('Ingresa tu nombre')
-          setLoading(false)
-          return
-        }
-        await api('/auth/register', {
-          method: 'POST',
-          body: JSON.stringify(form),
-        })
-        setStatus('Cuenta de estudiante creada. Iniciando sesión...')
-      }
       const data = await api('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email: form.email, password: form.password }),
       })
       await onLogin(data.access_token)
-      setStatus(mode === 'register' ? 'Registro completado y sesión activa' : 'Sesión iniciada')
-      await loadNotifications(data.access_token)
+      setStatus('Sesión iniciada')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -714,84 +1161,106 @@ function AuthPanel({ token, userLabel, roleLabel, onLogin, onLogout }) {
     }
   }
 
+  async function handleAvatarSubmit(e) {
+    e.preventDefault()
+    setAvatarError('')
+    setAvatarStatus('')
+    if (!token) {
+      setAvatarError('Debes iniciar sesión para cambiar la foto.')
+      return
+    }
+    if (!avatarFile) {
+      setAvatarError('Selecciona una imagen primero.')
+      return
+    }
+    setAvatarLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', avatarFile)
+      const response = await fetch(`${API_BASE}/auth/me/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!response.ok) {
+        let detail = 'No se pudo subir la foto'
+        try {
+          const json = await response.json()
+          detail = json.detail || detail
+        } catch {
+          // ignore malformed error bodies
+        }
+        throw new Error(detail)
+      }
+      const updated = await response.json()
+      const nextAvatar = updated?.avatar_url || ''
+      onAvatarUpdated?.(nextAvatar)
+      setAvatarFile(null)
+      setAvatarStatus('Foto de perfil actualizada')
+    } catch (err) {
+      setAvatarError(err.message)
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
+  const sessionIsAdmin = (roleLabel || '').toUpperCase() === 'ADMIN'
+
+  const body = token ? (
+    <div className="auth-panel__session">
+      <div className="auth-panel__profile">
+        <img className="auth-avatar" src={headerAvatar} alt={userLabel || 'Avatar de usuario'} />
+        <div>
+          <strong>{userLabel || 'Usuario'}</strong>
+          <span>{displayRole(roleLabel) || 'Sin rol'}</span>
+        </div>
+      </div>
+      <form className="auth-panel__avatar-form stack gap-sm" onSubmit={handleAvatarSubmit}>
+        <label className="field">
+          <span>Cambiar foto de perfil</span>
+          <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} />
+        </label>
+        {avatarError ? <p className="error">{avatarError}</p> : null}
+        {avatarStatus ? <p className="success">{avatarStatus}</p> : null}
+        <LoadingButton className="btn btn--ghost btn--small" loading={avatarLoading} disabled={avatarLoading || !avatarFile} type="submit">
+          {avatarLoading ? 'Actualizando...' : 'Guardar foto'}
+        </LoadingButton>
+      </form>
+      <div className="auth-panel__actions">
+        {sessionIsAdmin && onOpenAdmin ? (
+          <button className="btn btn--ghost btn--small" type="button" onClick={onOpenAdmin}>Administración</button>
+        ) : null}
+        <button className="btn btn--ghost btn--small" type="button" onClick={onLogout}>Cerrar sesión</button>
+      </div>
+    </div>
+  ) : (
+    <form className="auth-panel__form stack gap-sm" onSubmit={handleSubmit}>
+      <label className="field">
+        <span>Email</span>
+        <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} type="email" placeholder="correo@ejemplo.com" />
+      </label>
+      <label className="field">
+        <span>Contraseña</span>
+        <input value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} type="password" placeholder="Tu contraseña" />
+      </label>
+      {error ? <p className="error">{error}</p> : null}
+      {status ? <p className="success">{status}</p> : null}
+      <LoadingButton className="btn auth-panel__submit" disabled={loading} loading={loading} type="submit">
+        {loading ? 'Ingresando...' : 'Entrar'}
+      </LoadingButton>
+      <p className="auth-panel__hint">El acceso se gestiona desde el encabezado. Si no tienes cuenta, solicita al administrador que te cree una.</p>
+    </form>
+  )
+
+  if (compact) {
+    return <div className="auth-panel auth-panel--compact">{body}</div>
+  }
+
   return (
     <section className="student-access">
-      <div className="grid grid--2">
-        <Card title="Acceso único" subtitle="Un solo login para todos los roles">
-          <div className="admin-actions">
-            <button className={`nav-pill ${mode === 'login' ? 'active' : ''}`} onClick={() => setMode('login')} type="button">Ingresar</button>
-            <button className={`nav-pill ${mode === 'register' ? 'active' : ''}`} onClick={() => setMode('register')} type="button">Registrarme</button>
-          </div>
-
-          <form className="stack gap-sm" onSubmit={handleSubmit}>
-            {mode === 'register' && (
-              <label className="field">
-                <span>Nombre completo</span>
-                <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Tu nombre" />
-              </label>
-            )}
-            <label className="field">
-              <span>Email</span>
-              <input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} type="email" placeholder="correo@ejemplo.com" />
-            </label>
-            <label className="field">
-              <span>Contraseña</span>
-              <input value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} type="password" placeholder="Crea o escribe tu contraseña" />
-            </label>
-
-            {error ? <p className="error">{error}</p> : null}
-            {status ? <p className="success">{status}</p> : null}
-
-            <LoadingButton className="btn" disabled={loading} loading={loading} type="submit">
-              {loading ? 'Procesando...' : mode === 'register' ? 'Crear cuenta' : 'Entrar'}
-            </LoadingButton>
-          </form>
-
-          <div className="student-hint">
-            <p><strong>Nota:</strong> al registrarte se crea tu cuenta con rol <strong>STUDENT</strong>.</p>
-            <p>El mismo login aplica para ADMIN, EDITOR y PROFESSOR según su rol en base de datos.</p>
-          </div>
-        </Card>
-
-        <Card title="Mi sesión" subtitle="Usuario, rol y notificaciones">
-          {token ? (
-            <div className="stack gap-sm">
-              <p><strong>Usuario:</strong> {userLabel || 'Sin nombre'}</p>
-              <p><strong>Rol:</strong> {roleLabel || 'Sin rol'}</p>
-              <div className="admin-actions">
-                <button className="btn btn--ghost" onClick={() => loadNotifications()} type="button">Ver notificaciones</button>
-                <button className="btn btn--ghost" onClick={onLogout} type="button">Cerrar sesión</button>
-              </div>
-            </div>
-          ) : (
-            <p className="state-empty">Inicia sesión para acceder según tu rol.</p>
-          )}
-
-          <div className="student-feed">
-            <div className="card__header">
-              <h3>Mis notificaciones</h3>
-              <span>{notifications.length}</span>
-            </div>
-            {notificationsLoading ? (
-              <LoadingState message="Cargando notificaciones..." />
-            ) : notificationsError ? (
-              <p className="error">{notificationsError}</p>
-            ) : notifications.length === 0 ? (
-              <p className="state-empty">No tienes notificaciones personales todavía.</p>
-            ) : (
-              <div className="stack gap-sm">
-                {notifications.slice(0, 5).map((item) => (
-                  <div key={item.id} className="mini-item">
-                    <span className="mini-item__tag">{item.audience || 'all'}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.body}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
+      <Card title="Acceso" subtitle="Inicia sesión desde el encabezado">
+        {body}
+      </Card>
     </section>
   )
 }
@@ -816,14 +1285,19 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
   const [activeAdminSection, setActiveAdminSection] = useState(() => localStorage.getItem('school-admin-section') || 'overview')
   const [profileForm, setProfileForm] = useState(defaultProfile)
   const [historyContent, setHistoryContent] = useState('')
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role_name: 'ESTUDIANTE', avatar_url: '' })
+  const [userAvatarFile, setUserAvatarFile] = useState(null)
+  const [creatingUserLoading, setCreatingUserLoading] = useState(false)
   // search state for admin drawer (filter sections)
   const [adminSearch, setAdminSearch] = useState('')
+  const isAdmin = (roleLabel || '').toUpperCase() === 'ADMIN'
   const filteredAdminSections = useMemo(() => {
     const term = (adminSearch || '').trim().toLowerCase()
-    if (!term) return adminSections
-    return adminSections.filter((s) => (s.label || s.id || '').toLowerCase().includes(term))
-  }, [adminSearch])
-  const visibleAdminSections = filteredAdminSections.length ? filteredAdminSections : adminSections
+    const sections = adminSections.filter((section) => isAdmin || section.id !== 'usuarios')
+    if (!term) return sections
+    return sections.filter((s) => (s.label || s.id || '').toLowerCase().includes(term))
+  }, [adminSearch, isAdmin])
+  const visibleAdminSections = filteredAdminSections.length ? filteredAdminSections : adminSections.filter((section) => isAdmin || section.id !== 'usuarios')
   const [form, setForm] = useState(defaultContentForm)
   const [createdNews, setCreatedNews] = useState(null)
   const [newsDraftFiles, setNewsDraftFiles] = useState([])
@@ -832,16 +1306,34 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
   const [activityAttachmentFiles, setActivityAttachmentFiles] = useState([])
   const [createdActivity, setCreatedActivity] = useState(null)
   const [createdGalleryId, setCreatedGalleryId] = useState('')
+  const [albums, setAlbums] = useState([])
+  const [albumsLoading, setAlbumsLoading] = useState(false)
+  const [editingAlbumId, setEditingAlbumId] = useState('')
+  const [editingAlbumForm, setEditingAlbumForm] = useState({ title: '', description: '' })
+  const [editingAlbumFiles, setEditingAlbumFiles] = useState([])
+  const [editingAlbumDetail, setEditingAlbumDetail] = useState(null)
+  const [albumCoverFile, setAlbumCoverFile] = useState(null)
+  const [editingAlbumLoading, setEditingAlbumLoading] = useState(false)
+  // user management (admin)
+  const [usersList, setUsersList] = useState([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
+  const [editUserForm, setEditUserForm] = useState({ name: '', email: '', password: '', role_name: 'ESTUDIANTE', avatar_url: '' })
+  const [editAvatarFile, setEditAvatarFile] = useState(null)
+  const [updatingUserLoading, setUpdatingUserLoading] = useState(false)
   const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token])
-  const activeSection = adminSections.find((section) => section.id === activeAdminSection) || adminSections[0]
+  const activeSection = visibleAdminSections.find((section) => section.id === activeAdminSection)
+    || adminSections.find((section) => section.id === activeAdminSection)
+    || visibleAdminSections[0]
 
   useEffect(() => {
-    if (!adminSections.some((section) => section.id === activeAdminSection)) {
+    const allowedSections = adminSections.filter((section) => isAdmin || section.id !== 'usuarios')
+    if (!allowedSections.some((section) => section.id === activeAdminSection)) {
       setActiveAdminSection('overview')
       return
     }
     localStorage.setItem('school-admin-section', activeAdminSection)
-  }, [activeAdminSection])
+  }, [activeAdminSection, isAdmin])
 
   useEffect(() => {
     return () => {
@@ -875,8 +1367,73 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
     }
   }, [activityAttachmentFiles])
 
+
   function navigateAdminSection(sectionId) {
     setActiveAdminSection(sectionId)
+  }
+
+  async function createUser(e) {
+    e.preventDefault()
+    if (!token) {
+      setError('Debes iniciar sesión como administrador')
+      return
+    }
+    if (!isAdmin) {
+      setError('Solo el administrador puede crear usuarios')
+      return
+    }
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password.trim()) {
+      setError('Completa nombre, email y contraseña')
+      return
+    }
+    setCreatingUserLoading(true)
+    setError('')
+    setStatus('')
+    try {
+      const created = await api('/auth/register', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          name: userForm.name.trim(),
+          email: userForm.email.trim(),
+          password: userForm.password,
+          role_name: userForm.role_name,
+          avatar_url: userForm.avatar_url.trim() || null,
+        }),
+      })
+
+      // If an avatar file was selected, upload it using the admin endpoint for that user
+      if (userAvatarFile && created?.id) {
+        try {
+          const fd = new FormData()
+          fd.append('file', userAvatarFile)
+          await fetch(`/api/v1/auth/users/${created.id}/avatar`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          })
+        } catch (avatarErr) {
+          console.warn('Failed to upload avatar for created user:', avatarErr)
+          addToast('Usuario creado pero fallo al subir la imagen', { type: 'warning' })
+        }
+      }
+
+      setStatus(`Usuario ${created.name} creado correctamente`)
+      // Refresh users list in admin view
+      try {
+        await loadUsers()
+      } catch (e) {
+        // ignore load errors here
+      }
+      setUserForm({ name: '', email: '', password: '', role_name: 'ESTUDIANTE', avatar_url: '' })
+      setUserAvatarFile(null)
+      addToast('Usuario creado', { type: 'success' })
+    } catch (err) {
+      setError(err.message)
+      addToast('No se pudo crear el usuario: ' + err.message, { type: 'error' })
+    } finally {
+      setCreatingUserLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -903,10 +1460,301 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
     setHistoryContent(history?.content || '')
   }, [history])
 
+  useEffect(() => {
+    if (activeAdminSection !== 'galeria') return
+    let alive = true
+    setAlbumsLoading(true)
+    ;(async () => {
+      try {
+        const data = await api('/albums?limit=100')
+        if (!alive) return
+        setAlbums(Array.isArray(data) ? data : [])
+      } catch (err) {
+        if (alive) setError(err.message)
+      } finally {
+        if (alive) setAlbumsLoading(false)
+      }
+    })()
+    return () => { alive = false }
+  }, [activeAdminSection])
+
   function guard() {
     if (!token) {
       onTokenMissing?.()
       throw new Error('Debes iniciar sesión como administrador')
+    }
+  }
+
+  function openEditAlbum(album) {
+    setEditingAlbumId(album.id)
+    setEditingAlbumForm({
+      title: album.title || '',
+      description: album.description || '',
+    })
+    setEditingAlbumFiles([])
+    setAlbumCoverFile(null)
+    setEditingAlbumDetail(null)
+    void loadAlbumDetail(album.id)
+  }
+
+  function closeEditAlbum() {
+    setEditingAlbumId('')
+    setEditingAlbumForm({ title: '', description: '' })
+    setEditingAlbumFiles([])
+    setAlbumCoverFile(null)
+    setEditingAlbumDetail(null)
+  }
+
+  // User management helpers (admin)
+  function openEditUser(user) {
+    setEditingUser(user)
+    setEditUserForm({
+      name: user?.name || '',
+      email: user?.email || '',
+      password: '',
+      role_name: user?.role_name || 'ESTUDIANTE',
+      avatar_url: user?.avatar_url || '',
+    })
+    setEditAvatarFile(null)
+  }
+
+  function closeEditUser() {
+    setEditingUser(null)
+    setEditUserForm({ name: '', email: '', password: '', role_name: 'ESTUDIANTE', avatar_url: '' })
+    setEditAvatarFile(null)
+    setUpdatingUserLoading(false)
+  }
+
+  async function loadUsers() {
+    if (!isAdmin) return
+    setLoadingUsers(true)
+    setError('')
+    try {
+      const data = await api('/auth/users', { headers: authHeaders })
+      setUsersList(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeAdminSection !== 'usuarios') return
+    let alive = true
+    setLoadingUsers(true)
+    ;(async () => {
+      try {
+        const data = await api('/auth/users', { headers: authHeaders })
+        if (!alive) return
+        setUsersList(Array.isArray(data) ? data : [])
+      } catch (err) {
+        if (alive) setError(err.message)
+      } finally {
+        if (alive) setLoadingUsers(false)
+      }
+    })()
+    return () => { alive = false }
+  }, [activeAdminSection])
+
+  async function updateUser(e) {
+    e.preventDefault()
+    try {
+      guard()
+    } catch (err) {
+      setError(err.message)
+      return
+    }
+    if (!editingUser) return
+    setUpdatingUserLoading(true)
+    setError('')
+    setStatus('')
+    try {
+      const payload = {
+        name: editUserForm.name,
+        email: editUserForm.email,
+        role_name: editUserForm.role_name,
+        avatar_url: editUserForm.avatar_url || null,
+      }
+      if (editUserForm.password) payload.password = editUserForm.password
+
+      const updated = await api(`/auth/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      })
+
+      // If an avatar file was selected, upload it after updating the user
+      if (editAvatarFile) {
+        try {
+          const fd = new FormData()
+          fd.append('file', editAvatarFile)
+          await fetch(`${API_BASE}/auth/users/${editingUser.id}/avatar`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          })
+        } catch (avatarErr) {
+          console.warn('Failed to upload avatar for user:', avatarErr)
+          addToast('Usuario actualizado pero fallo al subir la imagen', { type: 'warning' })
+        }
+      }
+
+      setUsersList((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      setStatus('Usuario actualizado correctamente')
+      addToast('Usuario actualizado', { type: 'success' })
+      refreshPublic?.()
+      closeEditUser()
+    } catch (err) {
+      setError(err.message)
+      addToast('Error al actualizar usuario: ' + err.message, { type: 'error' })
+    } finally {
+      setUpdatingUserLoading(false)
+    }
+  }
+
+  function handleAlbumFilesChange(e) {
+    setEditingAlbumFiles(Array.from(e.target.files || []))
+  }
+
+  function handleAlbumCoverFileChange(e) {
+    setAlbumCoverFile(e.target.files?.[0] || null)
+  }
+
+  async function loadAlbumDetail(albumId = editingAlbumId) {
+    if (!albumId) return
+    try {
+      const data = await api(`/albums/${albumId}`)
+      setEditingAlbumDetail(data)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function refreshAlbums() {
+    const data = await api('/albums?limit=100')
+    setAlbums(Array.isArray(data) ? data : [])
+    return data
+  }
+
+  async function setAlbumCoverFromImage(imageUrl) {
+    guard()
+    if (!editingAlbumId || !imageUrl) return
+    setEditingAlbumLoading(true)
+    try {
+      await api(`/albums/${editingAlbumId}`, {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify({ cover_image: imageUrl }),
+      })
+      await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+      addToast('Portada actualizada', { type: 'success' })
+    } catch (err) {
+      setError(err.message)
+      addToast('Error al actualizar portada: ' + err.message, { type: 'error' })
+    } finally {
+      setEditingAlbumLoading(false)
+    }
+  }
+
+  async function uploadAlbumCover(e) {
+    e.preventDefault()
+    guard()
+    if (!editingAlbumId || !albumCoverFile) {
+      setError('Selecciona una imagen para portada')
+      return
+    }
+    setEditingAlbumLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', albumCoverFile)
+      await api(`/albums/${editingAlbumId}/upload-cover`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: fd,
+      })
+      await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+      setAlbumCoverFile(null)
+      addToast('Portada subida correctamente', { type: 'success' })
+    } catch (err) {
+      setError(err.message)
+      addToast('Error al subir portada: ' + err.message, { type: 'error' })
+    } finally {
+      setEditingAlbumLoading(false)
+    }
+  }
+
+  async function updateAlbum(e) {
+    e.preventDefault()
+    guard()
+    if (!editingAlbumId) return
+    setEditingAlbumLoading(true)
+    try {
+      const updated = await api(`/albums/${editingAlbumId}`, {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify(editingAlbumForm),
+      })
+      setAlbums((prev) => prev.map((album) => (album.id === editingAlbumId ? updated : album)))
+      setStatus('Álbum actualizado correctamente')
+      addToast('Álbum actualizado', { type: 'success' })
+      await refreshAlbums()
+      closeEditAlbum()
+    } catch (err) {
+      setError(err.message)
+      addToast('Error al actualizar álbum: ' + err.message, { type: 'error' })
+    } finally {
+      setEditingAlbumLoading(false)
+    }
+  }
+
+  async function uploadAlbumImages(e) {
+    e.preventDefault()
+    guard()
+    if (!editingAlbumId) return
+    const files = Array.from(editingAlbumFiles || [])
+    const altText = e.target.albumAltText?.value || ''
+    if (!files.length) {
+      setError('Selecciona una o más imágenes')
+      return
+    }
+    setEditingAlbumLoading(true)
+    try {
+      const failed = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append('file', file)
+        if (altText.trim()) fd.append('alt_text', altText.trim())
+        const response = await fetch(`${API_BASE}/albums/${editingAlbumId}/upload-image`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        })
+        if (!response.ok) {
+          let detail = 'No se pudo subir la imagen'
+          try {
+            const json = await response.json()
+            detail = json.detail || detail
+          } catch {
+            // ignore malformed bodies
+          }
+          failed.push(`${file.name}: ${detail}`)
+        }
+      }
+      if (failed.length) {
+        setError(`Algunas imágenes fallaron: ${failed.join(' | ')}`)
+        addToast('Subida parcial completada', { type: 'warning' })
+      } else {
+        addToast('Imágenes subidas al álbum', { type: 'success' })
+      }
+      e.target.reset()
+      setEditingAlbumFiles([])
+      await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+    } catch (err) {
+      setError(err.message)
+      addToast('Error al subir imágenes: ' + err.message, { type: 'error' })
+    } finally {
+      setEditingAlbumLoading(false)
     }
   }
 
@@ -956,13 +1804,6 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
     })
   }
 
-  function mapActivityFileKind(file) {
-    if (file.type.startsWith('image/')) return 'image'
-    if (file.type.startsWith('video/')) return 'video'
-    if (file.type.startsWith('audio/')) return 'audio'
-    return 'document'
-  }
-
   function handleActivityDraftFilesChange(e) {
     const selectedFiles = Array.from(e.target.files || [])
     setActivityDraftFiles((prev) => {
@@ -972,7 +1813,13 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
       return selectedFiles.map((file) => ({
         id: `${file.name}-${file.size}-${file.lastModified}`,
         file,
-        kind: mapActivityFileKind(file),
+        kind: file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : file.type.startsWith('audio/')
+              ? 'audio'
+              : 'document',
         previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
       }))
     })
@@ -995,7 +1842,13 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
       return selectedFiles.map((file) => ({
         id: `${file.name}-${file.size}-${file.lastModified}`,
         file,
-        kind: mapActivityFileKind(file),
+        kind: file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : file.type.startsWith('audio/')
+              ? 'audio'
+              : 'document',
         previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
       }))
     })
@@ -1324,27 +2177,40 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
      setStatus('')
      setCreatingNotice(true)
      try {
-       const payload = {
+        const payload = {
          title: form.noticeTitle,
          content: form.noticeContent,
          audience: form.noticeAudience || 'all',
          pinned: true,
        }
-       if (form.noticeExpiry) {
-         payload.end_at = new Date(form.noticeExpiry).toISOString()
-       }
-       await api('/notices', {
-         method: 'POST',
-         headers: authHeaders,
-         body: JSON.stringify(payload),
-       })
+        if (form.noticeExpiry) {
+          payload.end_at = new Date(form.noticeExpiry).toISOString()
+        }
+        // Diagnostics: log payload and headers so browser console shows details when a network error occurs
+        try {
+          console.debug('[createNotice] sending payload', payload)
+          console.debug('[createNotice] authHeaders', authHeaders)
+          console.debug('[createNotice] origin', window.location.origin)
+        } catch (consoleErr) {
+          // ignore if console access fails in some environments
+        }
+
+        await api('/notices', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify(payload),
+        })
        setStatus('Aviso creado')
        addToast('Aviso creado', { type: 'success' })
        setForm((prev) => ({ ...prev, noticeTitle: '', noticeContent: '', noticeExpiry: '', noticeAudience: 'all' }))
        refreshPublic?.()
-     } catch (err) {
-       setError(err.message)
-       addToast('Error al crear aviso: ' + err.message, { type: 'error' })
+      } catch (err) {
+        // Improve error logging to capture network errors (Failed to fetch) in the browser console
+        try {
+          console.error('[createNotice] request failed', err)
+        } catch (consoleErr) {}
+        setError(err.message)
+        addToast('Error al crear aviso: ' + err.message, { type: 'error' })
      } finally {
        setCreatingNotice(false)
      }
@@ -1428,7 +2294,21 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         setStatus('Galería creada. Ahora puedes subir imágenes a ella.')
         addToast('Galería creada', { type: 'success' })
         setForm((prev) => ({ ...prev, galleryTitle: '', galleryDescription: '' }))
+        try {
+          await api('/albums', {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({
+              gallery_id: galleryData.id,
+              title: galleryData.title || form.galleryTitle || 'Álbum principal',
+              description: galleryData.description || form.galleryDescription || null,
+            }),
+          })
+        } catch (albumErr) {
+          addToast('La galería se creó, pero no se pudo generar su álbum inicial: ' + albumErr.message, { type: 'warning' })
+        }
         refreshPublic?.()
+        await refreshAlbums().catch(() => null)
       } catch (err) {
         setError(err.message)
         addToast('Error al crear galería: ' + err.message, { type: 'error' })
@@ -1607,6 +2487,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('avisos')}>Crear aviso</button>
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('actividades')}>Nueva actividad</button>
             <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('galeria')}>Nueva galería</button>
+            {isAdmin ? <button className="btn btn--ghost" type="button" onClick={() => navigateAdminSection('usuarios')}>Nuevo usuario</button> : null}
           </div>
 
           <div className="admin-actions" style={{ marginTop: 8 }}>
@@ -1673,6 +2554,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         )}
 
         {activeAdminSection === 'perfil' && (
+          <>
           <Card title="Perfil institucional" subtitle="Cabecera, hero y pie de página">
             <form className="stack gap-sm" onSubmit={saveSiteProfile}>
               <div className="grid grid--2 profile-grid">
@@ -1691,6 +2573,88 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                 <label className="field"><span>YouTube</span><input value={profileForm.youtube_url} onChange={(e) => setProfileForm((p) => ({ ...p, youtube_url: e.target.value }))} /></label>
               </div>
               <LoadingButton className="btn" loading={savingProfile} type="submit">Guardar perfil</LoadingButton>
+            </form>
+          </Card>
+
+          <Card title="Usuarios registrados" subtitle="Lista y edición rápida">
+            {loadingUsers ? (
+              <LoadingState message="Cargando usuarios..." />
+            ) : usersList.length === 0 ? (
+              <p className="state-empty">No hay usuarios registrados aún.</p>
+            ) : (
+              <div className="stack gap-sm">
+                {usersList.map((u) => (
+                  <div key={u.id} className="user-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong>{u.name}</strong>
+                      <div style={{ fontSize: '0.85rem', color: '#666' }}>{u.email} • {displayRole(u.role_name) || ''}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn--small" type="button" onClick={() => openEditUser(u)}>Editar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+          {editingUser ? (
+            <div className="modal-overlay" onClick={closeEditUser}>
+              <div onClick={(e) => e.stopPropagation()}>
+                <Card title={`Editar usuario: ${editingUser.name}`} subtitle={editingUser.email}>
+                  <form className="stack gap-sm" onSubmit={updateUser}>
+                    <label className="field"><span>Nombre</span><input value={editUserForm.name} onChange={(e) => setEditUserForm((p) => ({ ...p, name: e.target.value }))} /></label>
+                    <label className="field"><span>Email</span><input value={editUserForm.email} onChange={(e) => setEditUserForm((p) => ({ ...p, email: e.target.value }))} type="email" /></label>
+                    <label className="field"><span>Nueva contraseña (opcional)</span><input value={editUserForm.password} onChange={(e) => setEditUserForm((p) => ({ ...p, password: e.target.value }))} type="password" /></label>
+                    <label className="field"><span>Rol</span>
+                      <select value={editUserForm.role_name} onChange={(e) => setEditUserForm((p) => ({ ...p, role_name: e.target.value }))}>
+                        <option value="ESTUDIANTE">Estudiante</option>
+                        <option value="EDITOR">Editor</option>
+                        <option value="PROFESOR">Profesor</option>
+                        <option value="ADMIN">Administrador</option>
+                        <option value="PADRE">Padre</option>
+                        <option value="INVITADO">Invitado</option>
+                      </select>
+                    </label>
+                    <label className="field"><span>Avatar URL (opcional)</span><input value={editUserForm.avatar_url} onChange={(e) => setEditUserForm((p) => ({ ...p, avatar_url: e.target.value }))} /></label>
+                    <label className="field"><span>Avatar (archivo) (opcional)</span><input type="file" accept="image/*" onChange={(e) => setEditAvatarFile(e.target.files?.[0] || null)} /></label>
+                    <div className="admin-actions">
+                      <LoadingButton className="btn" loading={updatingUserLoading} type="submit">Guardar cambios</LoadingButton>
+                      <button className="btn btn--ghost" type="button" onClick={closeEditUser}>Cancelar</button>
+                    </div>
+                  </form>
+                </Card>
+              </div>
+            </div>
+          ) : null}
+          </>
+        )}
+
+        {activeAdminSection === 'usuarios' && isAdmin && (
+          <Card title="Crear usuario" subtitle="Administración de accesos">
+            <form className="stack gap-sm" onSubmit={createUser}>
+              <div className="grid grid--2 profile-grid">
+                <label className="field"><span>Nombre completo</span><input value={userForm.name} onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))} placeholder="Nombre del usuario" /></label>
+                <label className="field"><span>Email</span><input value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} type="email" placeholder="correo@ejemplo.com" /></label>
+                <label className="field"><span>Contraseña</span><input value={userForm.password} onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))} type="password" placeholder="Contraseña temporal o definitiva" /></label>
+                <label className="field"><span>Rol</span>
+                  <select value={userForm.role_name} onChange={(e) => setUserForm((p) => ({ ...p, role_name: e.target.value }))}>
+                    <option value="ESTUDIANTE">Estudiante</option>
+                    <option value="EDITOR">Editor</option>
+                    <option value="PROFESOR">Profesor</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="PADRE">Padre</option>
+                    <option value="INVITADO">Invitado</option>
+                  </select>
+                </label>
+                <label className="field"><span>Avatar URL (opcional)</span>
+                  <input value={userForm.avatar_url} onChange={(e) => setUserForm((p) => ({ ...p, avatar_url: e.target.value }))} placeholder="https://..." />
+                </label>
+                <label className="field"><span>Avatar (archivo) (opcional)</span>
+                  <input type="file" accept="image/*" onChange={(e) => setUserAvatarFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+              <p className="state-empty">Si no se define avatar, el encabezado mostrará un identicon tipo GitHub.</p>
+              <LoadingButton className="btn" loading={creatingUserLoading} type="submit">Crear usuario</LoadingButton>
             </form>
           </Card>
         )}
@@ -1773,7 +2737,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
             <Card title="Crear actividad" subtitle="Activities">
               <form className="stack gap-sm" onSubmit={createActivity}>
                 <label className="field"><span>Titulo</span><input value={form.activityTitle} onChange={(e) => setForm((p) => ({ ...p, activityTitle: e.target.value }))} /></label>
-                <label className="field"><span>Descripcion</span><textarea rows="4" value={form.activityDescription} onChange={(e) => setForm((p) => ({ ...p, activityDescription: e.target.value }))} /></label>
+                <label className="field"><span>Descripción</span><textarea rows="4" value={form.activityDescription} onChange={(e) => setForm((p) => ({ ...p, activityDescription: e.target.value }))} /></label>
                 <label className="field">
                   <span>Tipo de actividad</span>
                   <select value={form.activityType} onChange={(e) => setForm((p) => ({ ...p, activityType: e.target.value }))}>
@@ -1814,7 +2778,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                     />
                   </label>
                   <label className="field">
-                    <span>Descripcion opcional</span>
+                    <span>Descripción opcional</span>
                     <input name="activityAttachmentCaption" type="text" placeholder="Se aplicara a todos los archivos seleccionados" />
                   </label>
                   <ActivityFilePreviewList files={activityAttachmentFiles} onRemove={removeActivityAttachmentFile} />
@@ -1841,7 +2805,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                             <small>{attachment.caption || attachment.content_type || attachment.kind}</small>
                           </div>
                           <a className="btn btn--ghost btn--small" href={attachment.url} target="_blank" rel="noreferrer">Abrir</a>
-                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachment(createdActivity.id, attachment.id)}>Borrar</button>
+                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachmentForEdit(attachment.id)}>Borrar</button>
                         </div>
                       ))}
                     </div>
@@ -1852,34 +2816,121 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           </div>
         )}
 
-        {activeAdminSection === 'galeria' && (
-          <div className="grid gap-sm">
-            <Card title="Crear galería" subtitle="Galería institucional">
-              <form className="stack gap-sm" onSubmit={createGallery}>
-                <label className="field"><span>Título</span><input value={form.galleryTitle} onChange={(e) => setForm((p) => ({ ...p, galleryTitle: e.target.value }))} /></label>
-                <label className="field"><span>Descripción</span><textarea rows="4" value={form.galleryDescription} onChange={(e) => setForm((p) => ({ ...p, galleryDescription: e.target.value }))} /></label>
-                 <LoadingButton className="btn" loading={creatingGalleryLoading} type="submit">Guardar galería</LoadingButton>
-              </form>
-            </Card>
-
-            {createdGalleryId && (
-              <Card title="Subir imágenes a la galería" subtitle={`Añadir fotos a galería ${createdGalleryId.substring(0, 8)}`}>
-                <form className="stack gap-sm" onSubmit={uploadImageToGallery}>
-                    <label className="field">
-                        <span>Imagen(es)</span>
-                        <input name="galleryImage" type="file" accept="image/*" multiple />
-                      </label>
-                  <label className="field">
-                    <span>Descripción (alt text)</span>
-                    <input name="galleryAltText" type="text" placeholder="Descripción de la imagen" />
-                  </label>
-                   <LoadingButton className="btn" loading={uploadingGalleryLoading} type="submit">Subir imagen</LoadingButton>
-                  <button className="btn btn--ghost" type="button" onClick={() => setCreatedGalleryId('')}>Finalizar galería</button>
+        {activeAdminSection === 'galeria' && (() => {
+          const albumsData = albums || [];
+          return (
+            <div className="grid gap-sm">
+              <Card title="Crear galería" subtitle="Galería institucional">
+                <form className="stack gap-sm" onSubmit={createGallery}>
+                  <label className="field"><span>Título</span><input value={form.galleryTitle} onChange={(e) => setForm((p) => ({ ...p, galleryTitle: e.target.value }))} /></label>
+                  <label className="field"><span>Descripción</span><textarea rows="4" value={form.galleryDescription} onChange={(e) => setForm((p) => ({ ...p, galleryDescription: e.target.value }))} /></label>
+                   <LoadingButton className="btn" loading={creatingGalleryLoading} type="submit">Guardar galería</LoadingButton>
                 </form>
               </Card>
-            )}
-          </div>
-        )}
+
+              <Card title="Álbumes existentes" subtitle="Se cargan directamente desde la base de datos">
+                <div className="admin-actions" style={{ justifyContent: 'flex-end', marginBottom: '8px' }}>
+                  <button className="btn btn--ghost btn--small" type="button" onClick={refreshAlbums}>Recargar desde BD</button>
+                </div>
+                {albumsLoading ? (
+                  <LoadingState message="Cargando álbumes..." />
+                ) : albumsData.length === 0 ? (
+                  <p className="state-empty">No hay álbumes registrados.</p>
+                ) : (
+                  <div className="stack gap-sm">
+                    {albumsData.map((album) => (
+                      <div key={album.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <strong>{album.title}</strong>
+                          <small style={{ display: 'block', color: '#666' }}>{album.images_count || 0} imagen(es)</small>
+                        </div>
+                        <button className="btn btn--small" type="button" onClick={() => openEditAlbum(album)}>Editar</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              {editingAlbumId && (
+                <div className="modal-overlay" onClick={closeEditAlbum}>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Card title="Editar álbum" subtitle={`Álbum ${editingAlbumId.substring(0, 8)}`}>
+                      <div className="admin-actions" style={{ justifyContent: 'space-between' }}>
+                        <small>Modifica datos y sube imágenes solo para este álbum.</small>
+                        <button className="btn btn--ghost btn--small" type="button" onClick={closeEditAlbum}>Cerrar</button>
+                      </div>
+
+                      <form className="stack gap-sm" onSubmit={updateAlbum}>
+                        <label className="field"><span>Título</span><input value={editingAlbumForm.title} onChange={(e) => setEditingAlbumForm((p) => ({ ...p, title: e.target.value }))} /></label>
+                        <label className="field"><span>Descripción</span><textarea rows="3" value={editingAlbumForm.description} onChange={(e) => setEditingAlbumForm((p) => ({ ...p, description: e.target.value }))} /></label>
+                        <LoadingButton className="btn" loading={editingAlbumLoading} type="submit">Guardar cambios</LoadingButton>
+                      </form>
+
+                      <form className="stack gap-sm" style={{ marginTop: '20px' }} onSubmit={uploadAlbumImages}>
+                        <label className="field">
+                          <span>Subir imágenes a este álbum</span>
+                          <input name="albumImages" type="file" accept="image/*" multiple onChange={handleAlbumFilesChange} />
+                        </label>
+                        <label className="field">
+                          <span>Descripción común (opcional)</span>
+                          <input name="albumAltText" type="text" placeholder="Se aplicará a todas las imágenes" />
+                        </label>
+                        {editingAlbumFiles.length > 0 ? <small>{editingAlbumFiles.length} archivo(s) seleccionado(s)</small> : null}
+                        <LoadingButton className="btn btn--ghost" loading={editingAlbumLoading} type="submit">Subir imágenes</LoadingButton>
+                      </form>
+
+                      <form className="stack gap-sm" style={{ marginTop: '20px' }} onSubmit={uploadAlbumCover}>
+                        <label className="field">
+                          <span>Subir portada del álbum</span>
+                          <input name="albumCoverImage" type="file" accept="image/*" onChange={handleAlbumCoverFileChange} />
+                        </label>
+                        {albumCoverFile ? <small>{albumCoverFile.name}</small> : null}
+                        <LoadingButton className="btn btn--ghost" loading={editingAlbumLoading} type="submit">Subir portada</LoadingButton>
+                      </form>
+
+                      <div className="stack gap-sm" style={{ marginTop: '20px' }}>
+                        <div className="admin-actions" style={{ justifyContent: 'space-between' }}>
+                          <small>Selecciona una imagen existente como portada.</small>
+                          <button className="btn btn--ghost btn--small" type="button" onClick={() => loadAlbumDetail(editingAlbumId)}>Recargar imágenes</button>
+                        </div>
+                        {!editingAlbumDetail ? (
+                          <p className="state-empty">Cargando imágenes del álbum...</p>
+                        ) : !editingAlbumDetail.images?.length ? (
+                          <p className="state-empty">Este álbum aún no tiene imágenes.</p>
+                        ) : (
+                          <div className="news-draft-manager__list">
+                            {editingAlbumDetail.images.map((image) => {
+                              const isCover = Boolean(editingAlbumDetail.cover_image && image.url === editingAlbumDetail.cover_image)
+                              return (
+                                <div key={image.id} className="news-draft-item">
+                                  <div className="news-draft-item__thumb">
+                                    <img src={image.thumbnail_url || image.url} alt={image.alt_text || 'Imagen del álbum'} />
+                                  </div>
+                                  <div className="news-draft-item__body">
+                                    <strong>{isCover ? 'Portada actual' : 'Imagen del álbum'}</strong>
+                                    <small>{image.alt_text || image.url}</small>
+                                  </div>
+                                  <button
+                                    className="btn btn--small"
+                                    type="button"
+                                    disabled={isCover || editingAlbumLoading}
+                                    onClick={() => setAlbumCoverFromImage(image.url)}
+                                  >
+                                    {isCover ? 'Portada seleccionada' : 'Usar como portada'}
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {activeAdminSection === 'historia' && (
           <Card title="Editar historia" subtitle="Historia institucional">
@@ -1926,6 +2977,13 @@ export default function App() {
   const [userLabel, setUserLabel] = useState(() => localStorage.getItem('school-auth-user') || '')
   const [roleLabel, setRoleLabel] = useState(() => localStorage.getItem('school-auth-role') || '')
   const [userId, setUserId] = useState(() => localStorage.getItem('school-auth-id') || '')
+  // avatar URL for logged user (shown in header). stored in localStorage to persist across reloads
+  const [userAvatar, setUserAvatar] = useState(() => localStorage.getItem('school-auth-avatar') || '')
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [profileAvatarFile, setProfileAvatarFile] = useState(null)
+  const [profileAvatarLoading, setProfileAvatarLoading] = useState(false)
+  const [profileAvatarStatus, setProfileAvatarStatus] = useState('')
+  const [profileAvatarError, setProfileAvatarError] = useState('')
   const [pushMessage, setPushMessage] = useState('')
   const [pushError, setPushError] = useState('')
   const [isPushSubscribed, setIsPushSubscribed] = useState(false)
@@ -1935,13 +2993,28 @@ export default function App() {
   const [editingNotice, setEditingNotice] = useState(null)
   const [editNoticeForm, setEditNoticeForm] = useState({ title: '', content: '', audience: 'all', end_at: '' })
   const [selectedNews, setSelectedNews] = useState(null)
-  const [editingNews, setEditingNews] = useState(null)
-  const [editNewsForm, setEditNewsForm] = useState({ title: '', excerpt: '', content: '' })
-  const [savingNewsLoading, setSavingNewsLoading] = useState(false)
-  const [savingNoticeLoading, setSavingNoticeLoading] = useState(false)
-  const [deletingNoticeId, setDeletingNoticeId] = useState('')
-  const { profile, news, notices, activities, galleries, history, loading, warning, reload } = usePublicData()
-  const { addToast } = useToast()
+   const [editingNews, setEditingNews] = useState(null)
+   const [editNewsForm, setEditNewsForm] = useState({ title: '', excerpt: '', content: '' })
+   const [savingNewsLoading, setSavingNewsLoading] = useState(false)
+   const [savingNoticeLoading, setSavingNoticeLoading] = useState(false)
+   const [deletingNoticeId, setDeletingNoticeId] = useState('')
+    const [editingActivity, setEditingActivity] = useState(null)
+    const [editActivityForm, setEditActivityForm] = useState({ title: '', description: '', activityType: 'cultural', location: '', date: '', publish_at: '' })
+    const [savingActivityLoading, setSavingActivityLoading] = useState(false)
+    const [activityEditFiles, setActivityEditFiles] = useState([])
+    const [uploadingActivityEditLoading, setUploadingActivityEditLoading] = useState(false)
+    const [activityImageEditFiles, setActivityImageEditFiles] = useState([])
+    const [uploadingActivityImagesLoading, setUploadingActivityImagesLoading] = useState(false)
+      const [error, setError] = useState('')
+      const [status, setStatus] = useState('')
+   const { profile, news, notices, activities, albums, galleries, history, loading, warning, reload } = usePublicData()
+   const { addToast } = useToast()
+
+    const recentAlbums = useMemo(() => {
+      return [...albums]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 3)
+    }, [albums])
 
   useEffect(() => {
     const onHashChange = () => {
@@ -2013,6 +3086,216 @@ export default function App() {
       addToast('Error al actualizar noticia: ' + err.message, { type: 'error' })
     } finally {
       setSavingNewsLoading(false)
+    }
+  }
+
+  function openEditActivity(activity) {
+    setEditingActivity(activity)
+    setEditActivityForm({
+      title: activity.title || '',
+      description: activity.description || '',
+      activityType: activity.activity_type || 'cultural',
+      location: activity.location || '',
+      date: activity.date ? new Date(activity.date).toISOString().slice(0, 16) : '',
+      publish_at: activity.publish_at ? new Date(activity.publish_at).toISOString().slice(0, 16) : '',
+    })
+    setActivityEditFiles([])
+  }
+
+  function closeEditActivity() {
+    setEditingActivity(null)
+    setEditActivityForm({ title: '', description: '', activityType: 'cultural', location: '', date: '', publish_at: '' })
+    setActivityEditFiles([])
+  }
+
+  function handleActivityEditFilesChange(e) {
+    const files = Array.from(e.target.files || [])
+    setActivityEditFiles((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+      return files.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        kind: file.type.startsWith('image/')
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : file.type.startsWith('audio/')
+              ? 'audio'
+              : 'document',
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+      }))
+    })
+  }
+
+  function handleActivityImageEditFilesChange(e) {
+    const files = Array.from(e.target.files || [])
+    setActivityImageEditFiles((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+      return files.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        kind: 'image',
+        previewUrl: URL.createObjectURL(file),
+      }))
+    })
+  }
+
+  function removeActivityEditFile(fileId) {
+    setActivityEditFiles((prev) => {
+      const target = prev.find((it) => it.id === fileId)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((it) => it.id !== fileId)
+    })
+  }
+
+  function removeActivityImageEditFile(fileId) {
+    setActivityImageEditFiles((prev) => {
+      const target = prev.find((it) => it.id === fileId)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((it) => it.id !== fileId)
+    })
+  }
+
+  async function setActivityCoverFromAttachment(url) {
+    if (!token || !editingActivity || !url) return
+    try {
+      const updated = await api(`/activities/${editingActivity.id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cover_image: url }),
+      })
+      setEditingActivity(updated)
+      await reload()
+      addToast('Portada asignada desde un adjunto', { type: 'success' })
+    } catch (err) {
+      addToast('Error al asignar portada: ' + err.message, { type: 'error' })
+    }
+  }
+
+  async function updateActivity(e) {
+    e.preventDefault()
+    if (!token || !editingActivity) return
+    setSavingActivityLoading(true)
+    try {
+      const payload = {
+        title: editActivityForm.title,
+        description: editActivityForm.description,
+        activity_type: editActivityForm.activityType,
+        location: editActivityForm.location || null,
+      }
+      if (editActivityForm.date) payload.date = new Date(editActivityForm.date).toISOString()
+      if (editActivityForm.publish_at) payload.publish_at = new Date(editActivityForm.publish_at).toISOString()
+      await api(`/activities/${editingActivity.id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      closeEditActivity()
+      reload()
+      addToast('Actividad actualizada correctamente', { type: 'success' })
+    } catch (err) {
+      addToast('Error al actualizar actividad: ' + err.message, { type: 'error' })
+    } finally {
+      setSavingActivityLoading(false)
+    }
+  }
+
+  async function uploadActivityAttachmentsForEdit(e) {
+    e.preventDefault()
+    if (!token || !editingActivity) return
+    const files = Array.from(activityEditFiles || [])
+    if (!files.length) {
+      addToast('Selecciona uno o más archivos', { type: 'warning' })
+      return
+    }
+    setUploadingActivityEditLoading(true)
+    setError('')
+    setStatus('')
+    try {
+      const fd = new FormData()
+      for (const it of files) fd.append('file', it.file)
+      const response = await fetch(`${API_BASE}/activities/${editingActivity.id}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!response.ok) {
+        let detail = 'No se pudieron subir los archivos'
+        try {
+          const json = await response.json()
+          detail = json.detail || detail
+        } catch {
+          // ignore malformed bodies
+        }
+        throw new Error(detail)
+      }
+      const updated = await response.json()
+      setEditingActivity(updated)
+      setActivityEditFiles([])
+      await reload()
+      addToast('Archivos agregados a la actividad', { type: 'success' })
+    } catch (err) {
+      addToast('Error al agregar archivos: ' + err.message, { type: 'error' })
+    } finally {
+      setUploadingActivityEditLoading(false)
+    }
+  }
+
+  async function uploadActivityImagesForEdit(e) {
+    e.preventDefault()
+    if (!token || !editingActivity) return
+    const files = Array.from(activityImageEditFiles || [])
+    if (!files.length) {
+      addToast('Selecciona una o más imágenes', { type: 'warning' })
+      return
+    }
+    setUploadingActivityImagesLoading(true)
+    try {
+      const fd = new FormData()
+      for (const it of files) fd.append('file', it.file)
+      const response = await fetch(`${API_BASE}/activities/${editingActivity.id}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!response.ok) {
+        let detail = 'No se pudieron subir las imágenes'
+        try {
+          const json = await response.json()
+          detail = json.detail || detail
+        } catch {
+          // ignore malformed bodies
+        }
+        throw new Error(detail)
+      }
+      const updated = await response.json()
+      setEditingActivity(updated)
+      setActivityImageEditFiles([])
+      await reload()
+      addToast('Imágenes agregadas a la actividad', { type: 'success' })
+    } catch (err) {
+      addToast('Error al agregar imágenes: ' + err.message, { type: 'error' })
+    } finally {
+      setUploadingActivityImagesLoading(false)
+    }
+  }
+
+  async function deleteActivityAttachmentForEdit(attachmentId) {
+    if (!token || !editingActivity) return
+    try {
+      const updated = await api(`/activities/${editingActivity.id}/attachments/${attachmentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setEditingActivity(updated)
+      await reload()
+      addToast('Adjunto eliminado', { type: 'success' })
+    } catch (err) {
+      addToast('Error al eliminar adjunto: ' + err.message, { type: 'error' })
     }
   }
 
@@ -2098,17 +3381,68 @@ export default function App() {
       const label = me?.name || 'Usuario'
       const roleName = me?.role_name || 'STUDENT'
       const id = me?.id || ''
+      // detect avatar from common fields returned by API
+      const avatarUrl = me?.avatar || me?.avatar_url || me?.picture || me?.image || me?.photo || me?.photo_url || ''
       setUserId(id)
       setUserLabel(label)
       setRoleLabel(roleName)
+      setUserAvatar(avatarUrl)
       localStorage.setItem('school-auth-id', id)
       localStorage.setItem('school-auth-user', label)
       localStorage.setItem('school-auth-role', roleName)
+      localStorage.setItem('school-auth-avatar', avatarUrl)
+      setShowUserMenu(false)
     } catch {
       setUserLabel('Usuario')
       setRoleLabel('STUDENT')
       localStorage.setItem('school-auth-user', 'Usuario')
       localStorage.setItem('school-auth-role', 'STUDENT')
+      setShowUserMenu(false)
+    }
+  }
+
+  async function updateMyAvatar(e) {
+    e.preventDefault()
+    setProfileAvatarError('')
+    setProfileAvatarStatus('')
+    if (!token) {
+      setProfileAvatarError('Inicia sesión para cambiar tu foto.')
+      return
+    }
+    if (!profileAvatarFile) {
+      setProfileAvatarError('Selecciona una imagen primero.')
+      return
+    }
+    setProfileAvatarLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', profileAvatarFile)
+      const response = await fetch(`${API_BASE}/auth/me/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!response.ok) {
+        let detail = 'No se pudo actualizar tu foto'
+        try {
+          const json = await response.json()
+          detail = json.detail || detail
+        } catch {
+          // ignore malformed error bodies
+        }
+        throw new Error(detail)
+      }
+      const updated = await response.json()
+      const nextAvatar = updated?.avatar_url || ''
+      setUserAvatar(nextAvatar)
+      localStorage.setItem('school-auth-avatar', nextAvatar || '')
+      setProfileAvatarFile(null)
+      setProfileAvatarStatus('Foto de perfil actualizada')
+      setShowUserMenu(false)
+    } catch (err) {
+      setProfileAvatarError(err.message)
+    } finally {
+      setProfileAvatarLoading(false)
     }
   }
 
@@ -2117,10 +3451,17 @@ export default function App() {
     setUserId('')
     setUserLabel('')
     setRoleLabel('')
+    setUserAvatar('')
+    setProfileAvatarFile(null)
+    setProfileAvatarLoading(false)
+    setProfileAvatarStatus('')
+    setProfileAvatarError('')
     localStorage.removeItem('school-auth-token')
     localStorage.removeItem('school-auth-id')
     localStorage.removeItem('school-auth-user')
     localStorage.removeItem('school-auth-role')
+    localStorage.removeItem('school-auth-avatar')
+    setShowUserMenu(false)
   }
 
   async function subscribePush() {
@@ -2197,13 +3538,23 @@ export default function App() {
   const latestNews = sortedNews[0]
   const latestNotice = filteredNotices[0]
   const latestActivity = filteredActivities[0]
-  const latestGallery = galleries[0]
+  const [selectedAlbum, setSelectedAlbum] = useState(null)
   const canOpenAdminPanel = ['ADMIN', 'EDITOR', 'PROFESSOR'].includes((roleLabel || '').toUpperCase())
+  const headerAvatar = useMemo(
+    () => userAvatar || buildAvatarDataUrl(userLabel || userId || roleLabel || 'usuario'),
+    [userAvatar, userLabel, userId, roleLabel],
+  )
+   const headerLogoUrl = '/escudo.png'
   const heroImageStyle = profile?.hero_image_url
     ? { backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.02), rgba(0,0,0,0.28)), url(${profile.hero_image_url})` }
     : undefined
 
   function goToSection(sectionId) {
+    if (sectionId === 'acceso') {
+      setShowUserMenu(true)
+      return
+    }
+    setShowUserMenu(false)
     window.location.hash = sectionId
     setActiveSection(sectionId)
   }
@@ -2212,30 +3563,139 @@ export default function App() {
     <AppErrorBoundary title="No se pudo cargar la aplicación" subtitle="Se produjo un error al renderizar la interfaz.">
     <div className="shell">
       <header className="topbar">
-        <div className="brand">
-          <div className="brand__logo">SC4</div>
-          <div>
-            <h1>{profile?.school_name || 'Cargando perfil institucional...'}</h1>
-            <p>{profile?.tagline || 'Recuperando información desde la base de datos...'}</p>
-          </div>
-        </div>
+         <div className="brand">
+           <img
+             className="brand__logo"
+             src={headerLogoUrl}
+             alt={profile?.school_name || 'Escudo del colegio'}
+             onError={(e) => {
+               e.currentTarget.onerror = null
+               e.currentTarget.src = '/escudo.jpg'
+             }}
+           />
+           <div>
+             <h1>{profile?.school_name || 'Cargando perfil institucional...'}</h1>
+             <p>{profile?.tagline || 'Recuperando información desde la base de datos...'}</p>
+           </div>
+         </div>
         <div className="topbar__actions">
+          <div className="socials" aria-label="Redes sociales">
+            {profile?.facebook_url ? (
+              <a className="socials__item socials__item--facebook" href={profile.facebook_url} target="_blank" rel="noreferrer" aria-label="Facebook"><SocialIcon network="facebook" /></a>
+            ) : (
+              <span className="socials__item socials__item--facebook" aria-hidden="true"><SocialIcon network="facebook" /></span>
+            )}
+            {profile?.instagram_url ? (
+              <a className="socials__item socials__item--instagram" href={profile.instagram_url} target="_blank" rel="noreferrer" aria-label="Instagram"><SocialIcon network="instagram" /></a>
+            ) : (
+              <span className="socials__item socials__item--instagram" aria-hidden="true"><SocialIcon network="instagram" /></span>
+            )}
+            {profile?.youtube_url ? (
+              <a className="socials__item socials__item--youtube" href={profile.youtube_url} target="_blank" rel="noreferrer" aria-label="YouTube"><SocialIcon network="youtube" /></a>
+            ) : (
+              <span className="socials__item socials__item--youtube" aria-hidden="true"><SocialIcon network="youtube" /></span>
+            )}
+          </div>
           <input
             className="search"
             placeholder={profile?.search_placeholder || 'Buscar noticias...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="socials" aria-label="Redes sociales">
-            {profile?.facebook_url ? <a href={profile.facebook_url} target="_blank" rel="noreferrer">f</a> : <span>f</span>}
-            {profile?.instagram_url ? <a href={profile.instagram_url} target="_blank" rel="noreferrer">ig</a> : <span>ig</span>}
-            {profile?.youtube_url ? <a href={profile.youtube_url} target="_blank" rel="noreferrer">yt</a> : <span>yt</span>}
+          <div className="header-auth" role="region" aria-label="Usuario">
+            <button
+              className="header-auth__trigger"
+              type="button"
+              onClick={() => setShowUserMenu((s) => !s)}
+              aria-expanded={showUserMenu}
+              aria-haspopup="menu"
+            >
+              <img className="header-auth__avatar" src={headerAvatar} alt={token ? (userLabel || 'Avatar de usuario') : 'Acceso'} />
+                <span className="header-auth__label">
+                  <strong>{token ? (userLabel || 'Usuario') : 'Acceso'}</strong>
+                  <small>{token ? (displayRole(roleLabel) || 'Sin rol') : 'Iniciar sesión'}</small>
+                </span>
+            </button>
+            {showUserMenu ? (
+              <div className="header-auth__popover" role="dialog" aria-label="Menú de usuario">
+                {token ? (
+                  <div className="header-auth__menu" role="menu">
+                    <div className="header-auth__menu-profile">
+                      <img className="auth-avatar" src={headerAvatar} alt={userLabel || 'Avatar de usuario'} />
+                        <div>
+                        <strong>{userLabel || 'Usuario'}</strong>
+                        <small>{displayRole(roleLabel) || 'Sin rol'}</small>
+                      </div>
+                    </div>
+
+                    <form className="header-auth__avatar-form stack gap-sm" onSubmit={updateMyAvatar}>
+                      <label className="field">
+                        <span>Cambiar foto de perfil</span>
+                        <input type="file" accept="image/*" onChange={(e) => setProfileAvatarFile(e.target.files?.[0] || null)} />
+                      </label>
+                      {profileAvatarError ? <p className="error">{profileAvatarError}</p> : null}
+                      {profileAvatarStatus ? <p className="success">{profileAvatarStatus}</p> : null}
+                      <LoadingButton className="btn btn--ghost btn--small" loading={profileAvatarLoading} disabled={profileAvatarLoading || !profileAvatarFile} type="submit">
+                        {profileAvatarLoading ? 'Guardando...' : 'Guardar foto'}
+                      </LoadingButton>
+                    </form>
+
+                    <button type="button" className="header-auth__menu-item" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','perfil'); goToSection('admin'); setShowUserMenu(false); }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      <span>Mi perfil</span>
+                    </button>
+
+                    {(roleLabel || '').toUpperCase() === 'ADMIN' ? (
+                      <button type="button" className="header-auth__menu-item" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','overview'); goToSection('admin'); setShowUserMenu(false); }}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M3 13h8V3H3z" />
+                          <path d="M13 21h8v-8h-8z" />
+                        </svg>
+                        <span>Administración</span>
+                      </button>
+                    ) : null}
+
+                    <button type="button" className="header-auth__menu-item header-auth__menu-item--danger" role="menuitem" onClick={() => { handleLogout(); setShowUserMenu(false); }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <path d="M16 17l5-5-5-5" />
+                        <path d="M21 12H9" />
+                      </svg>
+                      <span>Cerrar sesión</span>
+                    </button>
+                  </div>
+                ) : (
+                  <AuthPanel
+                    compact
+                    token={token}
+                    userLabel={userLabel}
+                    roleLabel={roleLabel}
+                    avatarUrl={headerAvatar}
+                    onLogin={handleLogin}
+                    onLogout={handleLogout}
+                    onAvatarUpdated={(nextAvatar) => {
+                      setUserAvatar(nextAvatar)
+                      localStorage.setItem('school-auth-avatar', nextAvatar || '')
+                    }}
+                    onOpenAdmin={() => {
+                      goToSection('admin')
+                      setShowUserMenu(false)
+                    }}
+                  />
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </header>
 
       <nav className="navbar">
-        {navItems.map((item) => (
+        {navItems
+          .filter((item) => item.id !== 'admin' || token)
+          .map((item) => (
           <SectionButton
             key={item.id}
             active={activeSection === item.id}
@@ -2303,16 +3763,48 @@ export default function App() {
                    <EmptyState message="Sin avisos por ahora." />
                  ) : (
                    <div className="stack gap-sm">
-                     {filteredNotices.slice(0, 3).map((item) => (
-                       <div key={item.id} className="notice-row">
-                         <div className="notice-row__icon">!</div>
-                         <div>
-                           <strong>{item.title}</strong>
-                           <p>{item.content}</p>
-                            <small>{item.audience || 'all'} • {formatDateTime(item.end_at || item.created_at)}</small>
-                         </div>
-                       </div>
-                     ))}
+                      {filteredNotices.slice(0, 3).map((item) => {
+                        const noticeType = (item.type || item.notice_type || item.kind || item.category || item.icon || '').toString().toLowerCase()
+                        function NoticeIcon() {
+                          if (noticeType.includes('reunion') || noticeType.includes('meeting') || noticeType.includes('calendar')) {
+                            return (
+                              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <rect x="3" y="5" width="18" height="16" rx="2" />
+                                <path d="M16 3v4M8 3v4" />
+                                <path d="M3 11h18" />
+                              </svg>
+                            )
+                          }
+                          if (noticeType.includes('entrega') || noticeType.includes('delivery') || noticeType.includes('paper') || noticeType.includes('boletin')) {
+                            return (
+                              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M21 15V6a2 2 0 0 0-2-2H7L3 6v9a2 2 0 0 0 2 2h14a0 0 0 0 0 0" />
+                                <path d="M21 15l-5-5-5 5" />
+                              </svg>
+                            )
+                          }
+                          // default: megaphone / speaker
+                          return (
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M3 11v2a2 2 0 0 0 2 2h3l6 3V6L8 9H5a2 2 0 0 0-2 2z" />
+                              <path d="M19 7a7 7 0 0 1 0 10" />
+                            </svg>
+                          )
+                        }
+
+                        return (
+                          <div key={item.id} className="notice-row">
+                            <div className="notice-row__icon" aria-hidden>
+                              <NoticeIcon />
+                            </div>
+                            <div>
+                              <strong>{item.title}</strong>
+                              <p>{item.content}</p>
+                              <small>{item.audience || 'all'} • {formatDateTime(item.end_at || item.created_at)}</small>
+                            </div>
+                          </div>
+                        )
+                      })}
                    </div>
                  )}
                </Card>
@@ -2330,12 +3822,9 @@ export default function App() {
                   <p className="state-empty">No hay actividades registradas.</p>
                 )}
               </Card>
-              <Card title="Galería destacada" subtitle={latestGallery ? `${latestGallery.images_count || 0} imágenes` : 'Galería'}>
-                {latestGallery ? (
-                  <>
-                    <strong>{latestGallery.title}</strong>
-                    <p>{latestGallery.description || 'Álbum institucional actualizado desde la base de datos.'}</p>
-                  </>
+              <Card title="Galería destacada" subtitle={recentAlbums[0] ? `${recentAlbums[0].images_count || 0} imágenes` : 'Galería'}>
+                {recentAlbums.length ? (
+                  <AlbumFeaturedCarousel albums={recentAlbums} onOpen={setSelectedAlbum} />
                 ) : (
                   <p className="state-empty">No hay galerías registradas.</p>
                 )}
@@ -2465,6 +3954,111 @@ export default function App() {
           </div>
         )}
 
+        {editingActivity && (
+          <div className="modal-overlay" onClick={closeEditActivity}>
+            <Card className="activity-edit-modal" title={`Editar: ${editingActivity.title?.substring(0, 35) || ''}`} subtitle={`Por: ${editingActivity.created_by_name || ''}`}>
+              <form className="activity-edit-modal__form stack gap-sm" onSubmit={updateActivity} onClick={(e) => e.stopPropagation()}>
+                <label className="field"><span>Título</span><input value={editActivityForm.title} onChange={(e) => setEditActivityForm((p) => ({ ...p, title: e.target.value }))} /></label>
+                <label className="field"><span>Descripción</span><textarea rows="3" value={editActivityForm.description} onChange={(e) => setEditActivityForm((p) => ({ ...p, description: e.target.value }))} /></label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label className="field"><span>Tipo</span>
+                    <select value={editActivityForm.activityType} onChange={(e) => setEditActivityForm((p) => ({ ...p, activityType: e.target.value }))}>
+                      <option value="cultural">cultural</option>
+                      <option value="deportiva">deportiva</option>
+                      <option value="academica">academica</option>
+                    </select>
+                  </label>
+                  <label className="field"><span>Lugar</span><input value={editActivityForm.location} onChange={(e) => setEditActivityForm((p) => ({ ...p, location: e.target.value }))} /></label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label className="field"><span>Fecha (evento)</span><input type="datetime-local" value={editActivityForm.date} onChange={(e) => setEditActivityForm((p) => ({ ...p, date: e.target.value }))} /></label>
+                  <label className="field"><span>Publicar en</span><input type="datetime-local" value={editActivityForm.publish_at} onChange={(e) => setEditActivityForm((p) => ({ ...p, publish_at: e.target.value }))} /></label>
+                </div>
+                <div className="admin-actions" style={{ gap: 8 }}>
+                  <LoadingButton className="btn" loading={savingActivityLoading} type="submit">Guardar cambios</LoadingButton>
+                  <button className="btn btn--ghost" type="button" onClick={closeEditActivity}>Cancelar</button>
+                </div>
+              </form>
+
+              <div className="activity-edit-modal__separator"></div>
+
+              <div className="activity-edit-modal__media-section">
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700 }}>Imágenes y portada</h4>
+
+                <form className="stack gap-sm" onSubmit={uploadActivityImagesForEdit} onClick={(e) => e.stopPropagation()}>
+                  <label className="field"><span>📸 Subir más imágenes</span><input type="file" accept="image/*" multiple onChange={handleActivityImageEditFilesChange} /></label>
+                  {activityImageEditFiles.length ? (
+                    <ActivityFilePreviewList files={activityImageEditFiles.map((it) => ({ id: it.id, file: it.file, previewUrl: it.previewUrl, kind: it.kind }))} onRemove={removeActivityImageEditFile} />
+                  ) : null}
+                  <LoadingButton className="btn btn--ghost btn--small" loading={uploadingActivityImagesLoading} type="submit">Agregar</LoadingButton>
+                </form>
+
+                {editingActivity.cover_image && (
+                  <div style={{ marginTop: 12, padding: '12px', border: '2px solid var(--primary)', borderRadius: '12px', background: 'rgba(109, 40, 217, 0.05)' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>Portada actual:</p>
+                    <img src={editingActivity.cover_image} alt="Portada" style={{ width: '100%', borderRadius: '8px', maxHeight: '140px', objectFit: 'cover' }} />
+                  </div>
+                )}
+
+                {Array.isArray(editingActivity.attachments) && editingActivity.attachments.filter((att) => att.kind === 'image').length > 0 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <p style={{ margin: '12px 0 8px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>Elige una imagen como portada:</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
+                      {editingActivity.attachments.filter((att) => att.kind === 'image').map((att) => (
+                        <button
+                          key={att.id}
+                          type="button"
+                          onClick={() => setActivityCoverFromAttachment(att.url)}
+                          style={{
+                            border: editingActivity.cover_image === att.url ? '3px solid var(--primary)' : '1px solid var(--line)',
+                            borderRadius: '8px',
+                            padding: 0,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            opacity: editingActivity.cover_image === att.url ? 1 : 0.7,
+                          }}
+                          title={att.filename}
+                        >
+                          <img src={att.url} alt={att.filename} style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="activity-edit-modal__separator"></div>
+
+              <div className="activity-edit-modal__media-section">
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700 }}>Otros archivos (videos, audio, PDF)</h4>
+                <form className="stack gap-sm" onSubmit={uploadActivityAttachmentsForEdit} onClick={(e) => e.stopPropagation()}>
+                  <label className="field"><span>Seleccionar archivos</span><input type="file" accept="video/*,audio/*,application/pdf" multiple onChange={handleActivityEditFilesChange} /></label>
+                  {activityEditFiles.length ? (
+                    <ActivityFilePreviewList files={activityEditFiles.map((it) => ({ id: it.id, file: it.file, previewUrl: it.previewUrl, kind: it.kind }))} onRemove={removeActivityEditFile} />
+                  ) : null}
+                  <LoadingButton className="btn btn--ghost btn--small" loading={uploadingActivityEditLoading} type="submit">Subir</LoadingButton>
+                </form>
+
+                {Array.isArray(editingActivity.attachments) && editingActivity.attachments.filter((att) => att.kind !== 'image').length > 0 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <div className="news-draft-manager__list">
+                      {editingActivity.attachments.filter((att) => att.kind !== 'image').map((att) => (
+                        <div key={att.id} className="news-draft-item">
+                          <div className="news-draft-item__thumb news-draft-item__thumb--doc"><strong>{(att.filename || 'FILE').split('.').pop()?.toUpperCase()}</strong></div>
+                          <div className="news-draft-item__body"><strong>{att.filename}</strong><small>{att.content_type}</small></div>
+                          <a className="btn btn--ghost btn--small" href={att.url} target="_blank" rel="noreferrer">Abrir</a>
+                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachmentForEdit(att.id)}>Borrar</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          </div>
+        )}
+
         {activeSection === 'actividades' && (
           <section>
             <SectionTitle kicker="Actividades" title="Deportivas, culturales y académicas" description="Hechas por nuestros estudiantes." />
@@ -2515,6 +4109,11 @@ export default function App() {
                     {item.location ? <small>{item.location}</small> : null}
                     {item.date ? <small>Evento: {formatDateTime(item.date)}</small> : null}
                     {item.publish_at ? <small>Publicado: {formatDateTime(item.publish_at)}</small> : null}
+                    {token && ((roleLabel || '').toUpperCase() === 'ADMIN' || item.created_by === userId) ? (
+                      <div className="admin-actions" style={{ marginTop: '8px', gap: '6px' }}>
+                        <button className="btn btn--small" type="button" onClick={() => openEditActivity(item)}>Editar</button>
+                      </div>
+                    ) : null}
                   </Card>
                 ))}
               </div>
@@ -2522,29 +4121,29 @@ export default function App() {
           </section>
         )}
 
-        {activeSection === 'galeria' && (
-          <section>
-            <SectionTitle kicker="Galería" title="Actos y memorias de la unidad educativa" description="Álbumes y fotografías organizadas desde la base de datos." />
-            {loading ? (
-              <div className="grid grid--3">
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </div>
-            ) : galleries.length === 0 ? (
-              <p className="state-empty">Sin galerías por ahora.</p>
-            ) : (
-              <div className="grid grid--3">
-                {galleries.map((item) => (
-                  <Card key={item.id} title={item.title} subtitle={`${item.images_count || 0} imágenes`}>
-                    <div className="gallery-thumb" />
-                    <p>{item.description || 'Galería institucional actualizada.'}</p>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        {activeSection === 'galeria' && (() => {
+          const albumsToShow = albums || [];
+          return (
+            <section>
+              <SectionTitle kicker="Galería" title="Actos y memorias de la unidad educativa" description="Álbumes y fotografías organizadas desde la base de datos." />
+              {loading ? (
+                <div className="grid grid--3">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+              ) : albumsToShow.length === 0 ? (
+                <p className="state-empty">Sin álbumes por ahora.</p>
+              ) : (
+                <div className="grid grid--3">
+                  {albumsToShow.map((item) => (
+                    <GalleryCard key={item.id} item={item} onOpen={setSelectedAlbum} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {activeSection === 'historia' && (
           <section>
@@ -2559,18 +4158,6 @@ export default function App() {
           </section>
         )}
 
-        {activeSection === 'acceso' && (
-          <section>
-            <SectionTitle kicker="Acceso" title="Inicia sesión" description="Usa un solo login; los permisos se aplican automáticamente según tu rol." />
-            <AuthPanel
-              token={token}
-              userLabel={userLabel}
-              roleLabel={roleLabel}
-              onLogin={handleLogin}
-              onLogout={handleLogout}
-            />
-          </section>
-        )}
 
         {activeSection === 'admin' && (
           <section>
@@ -2619,10 +4206,57 @@ export default function App() {
         )}
       </main>
 
+
+      {selectedAlbum ? <AlbumViewerModal album={selectedAlbum} onClose={() => setSelectedAlbum(null)} /> : null}
+
       <footer className="footer">
-        <div><strong>Dirección:</strong> {profile?.address || 'San Juan de Yapacaní, Bolivia'}</div>
-        <div><strong>Correo:</strong> uesagradocorazon4@gmail.com</div>
-        <div><strong>Teléfono:</strong> {profile?.phone || '+591 3 1234567'}</div>
+        <div className="footer__col footer__brand">
+          <strong>{profile?.school_name || 'U.E. Sagrado Corazón 4'}</strong>
+          <p>{profile?.tagline || 'Formamos con valores, educamos para la vida.'}</p>
+        </div>
+        <div className="footer__col">
+          <div className="footer__item">
+            <span className="footer__icon" aria-hidden="true">📍</span>
+            <div>
+              <strong>Dirección</strong>
+              <span>{profile?.address || 'San Juan de Yapacaní, Bolivia'}</span>
+            </div>
+          </div>
+          <div className="footer__item">
+            <span className="footer__icon" aria-hidden="true">📞</span>
+            <div>
+              <strong>Teléfono</strong>
+              <span>{profile?.phone || '+591 3 1234567'}</span>
+            </div>
+          </div>
+          <div className="footer__item">
+            <span className="footer__icon" aria-hidden="true">✉️</span>
+            <div>
+              <strong>Correo</strong>
+              <span>{profile?.email || 'uesagradocorazon4@gmail.com'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="footer__col">
+          <strong>Redes sociales</strong>
+          <div className="footer__socials" aria-label="Redes sociales del colegio">
+            {profile?.facebook_url ? (
+              <a className="socials__item socials__item--facebook" href={profile.facebook_url} target="_blank" rel="noreferrer" aria-label="Facebook"><SocialIcon network="facebook" /></a>
+            ) : (
+              <span className="socials__item socials__item--facebook" aria-hidden="true"><SocialIcon network="facebook" /></span>
+            )}
+            {profile?.instagram_url ? (
+              <a className="socials__item socials__item--instagram" href={profile.instagram_url} target="_blank" rel="noreferrer" aria-label="Instagram"><SocialIcon network="instagram" /></a>
+            ) : (
+              <span className="socials__item socials__item--instagram" aria-hidden="true"><SocialIcon network="instagram" /></span>
+            )}
+            {profile?.youtube_url ? (
+              <a className="socials__item socials__item--youtube" href={profile.youtube_url} target="_blank" rel="noreferrer" aria-label="YouTube"><SocialIcon network="youtube" /></a>
+            ) : (
+              <span className="socials__item socials__item--youtube" aria-hidden="true"><SocialIcon network="youtube" /></span>
+            )}
+          </div>
+        </div>
       </footer>
     </div>
     </AppErrorBoundary>

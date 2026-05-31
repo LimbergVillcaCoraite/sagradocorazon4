@@ -1,27 +1,33 @@
-from inspect import isawaitable
+import inspect
 
 
 async def session_exec(session, query):
-    result = session.exec(query)
-    if isawaitable(result):
-        result = await result
-    return result
+    """Execute a query on sync or async SQLModel sessions."""
+    exec_fn = session.exec
+    if inspect.iscoroutinefunction(exec_fn):
+        return await exec_fn(query)
+    return exec_fn(query)
 
 
 async def session_commit(session):
-    result = session.commit()
-    if isawaitable(result):
-        await result
+    """Commit the session on sync or async SQLModel sessions."""
+    commit_fn = session.commit
+    if inspect.iscoroutinefunction(commit_fn):
+        return await commit_fn()
+    return commit_fn()
 
 
 async def session_refresh(session, obj):
-    result = session.refresh(obj)
-    if isawaitable(result):
-        await result
+    """Refresh an object on sync or async SQLModel sessions."""
+    refresh_fn = session.refresh
+    if inspect.iscoroutinefunction(refresh_fn):
+        return await refresh_fn(obj)
+    return refresh_fn(obj)
 
 
 async def session_delete(session, obj):
-    result = session.delete(obj)
-    if isawaitable(result):
-        await result
-
+    """Delete an object on sync or async SQLModel sessions."""
+    delete_fn = session.delete
+    if inspect.iscoroutinefunction(delete_fn):
+        return await delete_fn(obj)
+    return delete_fn(obj)

@@ -1,5 +1,5 @@
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import hmac
@@ -46,12 +46,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 def create_access_token(subject: str, expires_minutes: int = 1440) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     to_encode = {"sub": subject, "exp": expire, "type": "access"}
     return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
 
 def create_refresh_token(subject: str, expires_days: int = 7) -> str:
-    expire = datetime.utcnow() + timedelta(days=expires_days)
+    expire = datetime.now(timezone.utc) + timedelta(days=expires_days)
     to_encode = {"sub": subject, "exp": expire, "type": "refresh"}
     return jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
 

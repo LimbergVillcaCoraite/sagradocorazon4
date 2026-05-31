@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,7 +18,7 @@ async def _get_or_create_history(session: AsyncSession) -> History:
     history = res.one_or_none()
     if history:
         return history
-    history = History(content="", updated_at=datetime.utcnow())
+    history = History(content="", updated_at=datetime.now(timezone.utc))
     session.add(history)
     await session_commit(session)
     await session_refresh(session, history)
@@ -38,7 +38,7 @@ async def update_history(
     history = await _get_or_create_history(session)
     history.content = payload.content
     history.last_updated_by = user_id
-    history.updated_at = datetime.utcnow()
+    history.updated_at = datetime.now(timezone.utc)
     session.add(history)
     await session_commit(session)
     await session_refresh(session, history)
