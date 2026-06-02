@@ -74,7 +74,7 @@ services:
       retries: 5
 
   caddy:
-    image: caddy:2.8-alpine
+    image: docker.io/library/caddy:2.8-alpine
     depends_on:
       - backend
       - frontend
