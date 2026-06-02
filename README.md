@@ -7,7 +7,7 @@ Sitio web para promover el periodismo estudiantil y ofrecer información institu
 - `backend/` → FastAPI, PostgreSQL, MinIO, autenticación JWT, notificaciones por correo y Web Push, integración con Google Calendar.
 - `frontend/` → React + Vite, interfaz pública dinámica y panel admin.
 - `docker-compose.yml` → entorno de desarrollo completo.
-- `docker-compose.prod.yml` → entorno de producción con Nginx reverse proxy.
+- `docker-compose.prod.yml` → entorno de producción con Caddy reverse proxy (SSL automático).
 
 > La solución está implementada como **monolito modular**, no como microservicios.
 
@@ -90,7 +90,16 @@ Usa el archivo:
 docker-compose -f docker-compose.prod.yml up --build
 ```
 
-El proxy Nginx expone el sitio en `http://localhost`.
+Con Caddy, el sitio queda expuesto en:
+
+- `http://sagradocorazon4.duck.dns.org`
+- `https://sagradocorazon4.duck.dns.org` (certificado TLS gratuito automático)
+
+### Requisitos para TLS automático (Caddy)
+
+- El dominio `sagradocorazon4.duck.dns.org` debe apuntar al IP público del servidor.
+- Deben estar abiertos los puertos `80` y `443` en firewall/security group.
+- Caddy debe conservar los volúmenes `caddy_data` y `caddy_config` para persistir certificados.
 
 ## Build manual por servicio
 
@@ -163,6 +172,18 @@ El registro usa `POST /api/v1/auth/register` y el inicio de sesión usa `POST /a
 - El flujo de integración continua está en `.github/workflows/ci-cd.yml`.
 - El entorno de producción está en `docker-compose.prod.yml`.
 - El frontend usa `npm ci` y build reproducible con `package-lock.json`.
+- En `main`, GitHub Actions despliega automáticamente por SSH y ejecuta Docker Compose en el servidor.
+
+### Secrets requeridos en GitHub Actions
+
+- `PROD_HOST` (ej: `136.248.241.241`)
+- `PROD_USER` (ej: `opc`)
+- `PROD_PORT` (opcional, default `22`)
+- `PROD_SSH_KEY` (contenido de la clave privada SSH)
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_NAME`
+- `SECRET_KEY`
 
 ## Notas técnicas
 

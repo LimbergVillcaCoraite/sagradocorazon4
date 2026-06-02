@@ -1,0 +1,9 @@
+sagradocorazon4.duck.dns.org {
+  encode gzip zstd
+
+  @api path /api/*
+  reverse_proxy @api backend:4000
+
+  reverse_proxy frontend:80
+}
+
