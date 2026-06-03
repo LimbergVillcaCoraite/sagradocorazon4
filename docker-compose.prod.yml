@@ -70,7 +70,7 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "nginx -t 2>/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -90,7 +90,7 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:2019/config/ 2>/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
