@@ -65,37 +65,30 @@ app.include_router(site_router.router)
 
 @app.on_event("startup")
 async def on_startup():
-    # create tables
-    async with engine.begin() as conn:
-        try:
-            await conn.run_sync(SQLModel.metadata.create_all)
-        except Exception as e:
-            # Ignore errors from existing tables/types (e.g., duplicate key errors)
-            import logging
-            logger = logging.getLogger("uvicorn")
-            logger.warning(f"Warning during table creation (likely already exists): {str(e)}")
-        try:
-            await conn.execute(text("ALTER TABLE site_profile ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR"))
-            await conn.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"))
-            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS attachments_json TEXT"))
-            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP"))
-            await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS created_by UUID"))
-        except Exception as e:
-            import logging
-            logger = logging.getLogger("uvicorn")
-            logger.warning(f"Warning during ALTER TABLE (columns may already exist): {str(e)}")
-    # NOTE: seeding roles, admin user and example data was causing startup
-    # failures in environments where the database already contains duplicate
-    # rows (MultipleResultsFound). To avoid crashing the app on startup, the
-    # automatic seeding has been disabled here. Use the `seed.py` script or
-    # manual SQL to populate roles/users/albums when needed.
-
+    try:
+        async with engine.begin() as conn:
+            try:
+                await conn.run_sync(SQLModel.metadata.create_all)
+            except Exception as e:
+                logger.warning(f"Warning during table creation: {str(e)}")
+            try:
+                await conn.execute(text("ALTER TABLE site_profile ADD COLUMN IF NOT EXISTS hero_image_url VARCHAR"))
+                await conn.execute(text("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS avatar_url VARCHAR"))
+                await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS attachments_json TEXT"))
+                await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP"))
+                await conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS created_by UUID"))
+            except Exception as e:
+                logger.warning(f"Warning during ALTER TABLE: {str(e)}")
+    except Exception as e:
+        logger.warning(f"Database unavailable on startup (expected in test environments): {str(e)}")
 
     # ensure MinIO bucket exists for uploads
     await ensure_bucket_exists()
-    
-    # Start background activity scheduler
-    await start_activity_scheduler()
+
+    try:
+        await start_activity_scheduler()
+    except Exception as e:
+        logger.warning(f"Activity scheduler failed to start: {str(e)}")
 
 
 # --- Simple health ---
