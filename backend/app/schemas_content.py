@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 from uuid import UUID
 
@@ -13,13 +13,13 @@ class NewsAttachment(BaseModel):
     caption: Optional[str] = None
     created_at: datetime
 
-# News schemas
 class NewsCreate(BaseModel):
     title: str
     slug: Optional[str] = None
     excerpt: Optional[str] = None
     content: str
     cover_image: Optional[str] = None
+    label: Optional[Literal['A', 'B', 'C']] = None
     status: str = "draft"  # draft | published
     category_id: Optional[UUID] = None
 
@@ -28,6 +28,7 @@ class NewsUpdate(BaseModel):
     excerpt: Optional[str] = None
     content: Optional[str] = None
     cover_image: Optional[str] = None
+    label: Optional[Literal['A', 'B', 'C']] = None
     status: Optional[str] = None
     category_id: Optional[UUID] = None
 
@@ -38,6 +39,7 @@ class NewsRead(BaseModel):
     slug: str
     excerpt: Optional[str]
     content: str
+    label: Optional[str] = None
     cover_image: Optional[str]
     attachments: List[NewsAttachment] = Field(default_factory=list)
     status: str
@@ -50,6 +52,7 @@ class NewsRead(BaseModel):
 class NoticeCreate(BaseModel):
     title: str
     content: str
+    label: Optional[Literal['A', 'B', 'C']] = None
     audience: str = "all"  # all | students | parents | teachers
     pinned: bool = False
     start_at: Optional[datetime] = None
@@ -58,6 +61,7 @@ class NoticeCreate(BaseModel):
 class NoticeUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    label: Optional[Literal['A', 'B', 'C']] = None
     audience: Optional[str] = None
     pinned: Optional[bool] = None
     start_at: Optional[datetime] = None
@@ -68,6 +72,7 @@ class NoticeRead(BaseModel):
     id: UUID
     title: str
     content: str
+    label: Optional[str] = None
     audience: str
     pinned: bool
     created_at: datetime

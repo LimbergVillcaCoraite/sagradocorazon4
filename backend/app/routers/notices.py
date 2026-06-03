@@ -46,6 +46,7 @@ async def serialize_notice(notice: Notice, session: AsyncSession) -> NoticeRead:
         id=notice.id,
         title=notice.title,
         content=notice.content,
+        label=notice.label,
         audience=notice.audience,
         pinned=notice.pinned,
         created_at=notice.created_at,
@@ -142,6 +143,7 @@ async def create_notice(
     notice = Notice(
         title=notice_data.title,
         content=notice_data.content,
+        label=notice_data.label,
         audience=notice_data.audience,
         pinned=notice_data.pinned,
         created_by=user_id,
@@ -190,6 +192,8 @@ async def update_notice(
         notice.title = notice_data.title
     if notice_data.content:
         notice.content = notice_data.content
+    if notice_data.label is not None:
+        notice.label = notice_data.label
     if notice_data.audience:
         notice.audience = notice_data.audience
     if notice_data.pinned is not None:

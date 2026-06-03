@@ -22,6 +22,7 @@ class News(SQLModel, table=True):
     slug: str
     excerpt: Optional[str] = None
     content: Optional[str] = None
+    label: Optional[str] = None
     cover_image: Optional[str] = None
     attachments_json: Optional[str] = None
     status: str = "draft"  # draft|published
@@ -36,6 +37,7 @@ class Notice(SQLModel, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     title: str
     content: str
+    label: Optional[str] = None
     audience: str = "all"  # students|parents|teachers|all
     start_at: Optional[datetime] = None
     end_at: Optional[datetime] = None
