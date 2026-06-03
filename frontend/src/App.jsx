@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { LoadingButton, useToast } from './ui.jsx'
 import './styles.css'
 
@@ -74,6 +74,39 @@ function SocialIcon({ network }) {
   )
 }
 
+function NoticeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+function FooterInfoIcon({ kind }) {
+  if (kind === 'location') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </svg>
+    )
+  }
+  if (kind === 'phone') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .7 3a2 2 0 0 1-.4 2.1L8 10.2a16 16 0 0 0 5.8 5.8l1.4-1.3a2 2 0 0 1 2.1-.4 14 14 0 0 0 3 .7A2 2 0 0 1 22 16.9z" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 5h16v14H4z" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  )
+}
+
 function SchoolEmblem({ label = 'U.E. SAGRADO CORAZÓN 4' }) {
   return (
     <img
@@ -105,8 +138,10 @@ const defaultContentForm = {
   newsTitle: '',
   newsExcerpt: '',
   newsContent: '',
+  newsLabel: '',
   noticeTitle: '',
   noticeContent: '',
+  noticeLabel: '',
   noticeExpiry: '',
   noticeAudience: 'all',
   activityTitle: '',
@@ -126,6 +161,9 @@ const defaultContentForm = {
   googleStart: '',
   googleEnd: '',
 }
+
+const LABEL_OPTIONS = ['A', 'B', 'C']
+const isAllowedLabel = (value) => LABEL_OPTIONS.includes(value)
 
 const defaultLoginForm = {
   name: '',
@@ -211,6 +249,13 @@ function formatDateTime(value) {
   if (Number.isNaN(date.getTime())) return 'Sin fecha'
   return new Intl.DateTimeFormat('es-BO', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
+function normalizeText(value = '') {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
 function timeAgo(value) {
   if (!value) return ''
   const then = new Date(value).getTime()
@@ -222,6 +267,30 @@ function timeAgo(value) {
   if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`
   return `hace ${Math.floor(diff / 86400)}d`
 }
+
+function getLabelName(value = '') {
+  const normalized = normalizeText(value)
+  if (!normalized) return ''
+  // Map single letters A, B, C to descriptive names shown in the original mockup
+  if (normalized === 'a') return 'DEPORTES'
+  if (normalized === 'b') return 'ESTUDIANTES'
+  if (normalized === 'c') return 'MEDIO AMBIENTE'
+  return String(value).toUpperCase()
+}
+
+function getNoticeBadgeClass(value = '') {
+  const normalized = normalizeText(value)
+  if (!normalized) return 'notice-badge--default'
+  if (normalized === 'a') return 'notice-badge--deportes'
+  if (normalized === 'b') return 'notice-badge--estudiantes'
+  if (normalized === 'c') return 'notice-badge--medioambiente'
+  if (normalized.includes('deport')) return 'notice-badge--deportes'
+  if (normalized.includes('estudiant') || normalized.includes('academ')) return 'notice-badge--estudiantes'
+  if (normalized.includes('medio ambiente') || normalized.includes('ambient')) return 'notice-badge--medioambiente'
+  if (normalized.includes('cultural')) return 'notice-badge--cultural'
+  return 'notice-badge--default'
+}
+
 function splitNewsMedia(item) {
   const attachments = Array.isArray(item?.attachments) ? item.attachments : []
   const uniqueByUrl = new Map()
@@ -345,9 +414,98 @@ function NewsPostCard({ item, compact = false, onOpen, canEdit = false, onEdit }
   const text = item.excerpt || item.content || ''
   const initial = (item.author_name || item.title || 'N').trim().charAt(0).toUpperCase()
   const interactive = typeof onOpen === 'function'
+  // derive a small category/tag label to show as the badge over the cover (matches the mockup)
+  const badgeLabel = item.kicker || item.category || item.tag || item.category_name || item.type || item.label || null
+
+   // map common category names to a short class suffix so we can style badges per-category
+   const categoryClassMap = {
+     a: 'deportes',
+     b: 'estudiantes',
+      c: 'medioambiente',
+     deportes: 'deportes',
+     deportiva: 'deportes',
+     deporte: 'deportes',
+     estudiantes: 'estudiantes',
+     estudiante: 'estudiantes',
+     academica: 'estudiantes',
+     cultural: 'cultural',
+     'medio ambiente': 'medioambiente',
+     medioambiente: 'medioambiente',
+     ambiente: 'medioambiente',
+   }
+   const rawCategory = normalizeText(item.category || item.kicker || item.category_name || item.tag || item.type || item.label || '')
+   const badgeSuffix = categoryClassMap[rawCategory] || 'default'
+   const badgeClass = `news-post__badge news-post__badge--${badgeSuffix}`
+   // Use getLabelName if it's an A/B/C label, otherwise use the label as-is
+   const displayBadgeLabel = badgeLabel && (normalizeText(String(badgeLabel)) === 'a' || normalizeText(String(badgeLabel)) === 'b' || normalizeText(String(badgeLabel)) === 'c') ? getLabelName(badgeLabel) : String(badgeLabel).toUpperCase()
+   const badgeElement = badgeLabel ? <span className={badgeClass}>{displayBadgeLabel}</span> : null
+
+  // Prepare cover/media element so we can render it before the header when compact (homepage) layout is required
+  const coverElement = (all && all.length) ? (
+    <div className={`news-post__cover ${all.length > 1 ? 'news-post__cover--media' : ''}`}>
+      {badgeElement}
+      {all.length === 1 ? (
+        all[0].kind === 'image' ? (
+          <img src={all[0].url} alt={all[0].caption || all[0].filename || item.title || 'Imagen de noticia'} />
+        ) : all[0].kind === 'video' ? (
+          <video controls preload="metadata" src={all[0].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <a className="news-post__cover-file" href={all[0].url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+            <span className="news-post__cover-file-icon">DOC</span>
+            <span className="news-post__cover-file-name">{all[0].filename || 'Archivo adjunto'}</span>
+          </a>
+        )
+      ) : (
+        <MixedMediaCarousel items={all} title={item.title} compact={compact} />
+      )}
+    </div>
+  ) : null
+
+  // Teaser / homepage card (compact=true)
+  if (compact) {
+    return (
+      <article
+        className={`news-post news-post--teaser ${interactive ? 'news-post--clickable' : ''}`}
+        role={interactive ? 'button' : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        onClick={interactive ? () => onOpen(item) : undefined}
+        onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(item) } } : undefined}
+      >
+        {coverElement}
+        <div className="news-post__body">
+          <strong className="news-post__title">{item.title}</strong>
+          {text ? <p className="news-post__content">{text}</p> : null}
+          {canEdit && (
+            <div className="admin-actions" style={{ gap: '6px' }}>
+              <button className="btn btn--small" type="button" onClick={(e) => { e.stopPropagation(); onEdit?.(item) }}>Editar</button>
+            </div>
+          )}
+          <div className="news-post__footer">
+            <div className="news-post__footer-date">
+              <span className="news-post__footer-icon" aria-hidden>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3" y="5" width="18" height="16" rx="2" />
+                  <path d="M16 3v4M8 3v4M3 11h18" />
+                </svg>
+              </span>
+              {formatDate(item.created_at)}
+            </div>
+            <button type="button" className="news-post__read-more" onClick={(e) => { e.stopPropagation(); onOpen?.(item) }} aria-label={`Leer noticia ${item.title}`}>
+              Leer más
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  // Full card layout
   return (
     <article
-      className={`news-post ${compact ? 'news-post--compact' : ''} ${interactive ? 'news-post--clickable' : ''}`}
+      className={`news-post ${interactive ? 'news-post--clickable' : ''}`}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
       onClick={interactive ? () => onOpen(item) : undefined}
@@ -357,9 +515,9 @@ function NewsPostCard({ item, compact = false, onOpen, canEdit = false, onEdit }
         <div className="news-post__avatar">{initial || 'N'}</div>
         <div className="news-post__header-copy">
           <strong>{item.title}</strong>
-          <div>
+          <div className="news-post__meta-row">
             <span className="news-post__meta">{item.author_name || 'Redacción'}</span>
-            <small className="news-post__time">{compact ? timeAgo(item.created_at) : formatDateTime(item.created_at)}</small>
+            <small className="news-post__time">• {formatDateTime(item.created_at)}</small>
           </div>
           {item.audience ? <small>{item.audience}</small> : null}
           {canEdit && (
@@ -369,27 +527,8 @@ function NewsPostCard({ item, compact = false, onOpen, canEdit = false, onEdit }
           )}
         </div>
       </header>
+      {coverElement}
       {text ? <p className="news-post__content">{text}</p> : null}
-      {all && all.length ? (
-        all.length === 1 ? (
-          all[0].kind === 'image' ? (
-            <div className="news-post__cover">
-              <img src={all[0].url} alt={all[0].caption || all[0].filename || item.title || 'Imagen de noticia'} />
-            </div>
-          ) : all[0].kind === 'video' ? (
-            <div className="news-post__cover">
-              <video controls preload="metadata" src={all[0].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          ) : (
-            <div className="news-post__cover">
-              <a href={all[0].url} target="_blank" rel="noreferrer">{all[0].filename || 'Abrir archivo'}</a>
-            </div>
-          )
-        ) : (
-          <MixedMediaCarousel items={all} title={item.title} compact={compact} />
-        )
-      ) : null}
-      {compact && text.length > 180 ? <small className="news-post__read-more">Haz clic para leer la noticia completa</small> : null}
       {documents.length ? (
         <div className="news-post__attachments">
           {documents.map((attachment) => (
@@ -2134,6 +2273,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           title: form.newsTitle,
           excerpt: form.newsExcerpt,
           content: form.newsContent,
+          label: isAllowedLabel(form.newsLabel) ? form.newsLabel : null,
           status: 'draft',
         }),
       })
@@ -2149,7 +2289,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
       }
 
       setCreatedNews(currentNews)
-      setForm((prev) => ({ ...prev, newsTitle: '', newsExcerpt: '', newsContent: '' }))
+      setForm((prev) => ({ ...prev, newsTitle: '', newsExcerpt: '', newsContent: '', newsLabel: '' }))
       setNewsDraftFiles([])
 
       if (failedFiles.length) {
@@ -2180,6 +2320,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         const payload = {
          title: form.noticeTitle,
          content: form.noticeContent,
+          label: isAllowedLabel(form.noticeLabel) ? form.noticeLabel : null,
          audience: form.noticeAudience || 'all',
          pinned: true,
        }
@@ -2202,7 +2343,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         })
        setStatus('Aviso creado')
        addToast('Aviso creado', { type: 'success' })
-       setForm((prev) => ({ ...prev, noticeTitle: '', noticeContent: '', noticeExpiry: '', noticeAudience: 'all' }))
+       setForm((prev) => ({ ...prev, noticeTitle: '', noticeContent: '', noticeLabel: '', noticeExpiry: '', noticeAudience: 'all' }))
        refreshPublic?.()
       } catch (err) {
         // Improve error logging to capture network errors (Failed to fetch) in the browser console
@@ -2469,7 +2610,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
   return (
     <section className="admin-grid admin-layout">
       <aside className="admin-drawer">
-        <Card title="Panel admin" subtitle={activeSection.description}>
+        <Card title="Panel admin" subtitle="Sección de trabajo">
           <div className="admin-note">
             <p><strong>Flujo:</strong> inicia sesión como ADMIN y usa la barra lateral para ir a cada bloque.</p>
             <p>Los cambios refrescan el contenido público al instante.</p>
@@ -2664,6 +2805,12 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
             <Card title="Crear noticia" subtitle="News">
               <form className="stack gap-sm" onSubmit={createNews}>
                 <label className="field"><span>Título</span><input value={form.newsTitle} onChange={(e) => setForm((p) => ({ ...p, newsTitle: e.target.value }))} /></label>
+                <label className="field"><span>Etiqueta / categoría</span>
+                  <select value={form.newsLabel} onChange={(e) => setForm((p) => ({ ...p, newsLabel: e.target.value }))}>
+                    <option value="">Sin etiqueta</option>
+                    {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
+                  </select>
+                </label>
                 <label className="field"><span>Resumen</span><input value={form.newsExcerpt} onChange={(e) => setForm((p) => ({ ...p, newsExcerpt: e.target.value }))} /></label>
                 <label className="field"><span>Contenido</span><textarea rows="4" value={form.newsContent} onChange={(e) => setForm((p) => ({ ...p, newsContent: e.target.value }))} /></label>
                 <label className="field">
@@ -2713,6 +2860,12 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           <Card title="Crear aviso" subtitle="Notices">
             <form className="stack gap-sm" onSubmit={createNotice}>
               <label className="field"><span>Título</span><input value={form.noticeTitle} onChange={(e) => setForm((p) => ({ ...p, noticeTitle: e.target.value }))} /></label>
+              <label className="field"><span>Etiqueta / categoría</span>
+                <select value={form.noticeLabel} onChange={(e) => setForm((p) => ({ ...p, noticeLabel: e.target.value }))}>
+                  <option value="">Sin etiqueta</option>
+                  {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
+                </select>
+              </label>
               <label className="field"><span>Contenido</span><textarea rows="4" value={form.noticeContent} onChange={(e) => setForm((p) => ({ ...p, noticeContent: e.target.value }))} /></label>
               <label className="field">
                 <span>Audiencia</span>
@@ -2805,7 +2958,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                             <small>{attachment.caption || attachment.content_type || attachment.kind}</small>
                           </div>
                           <a className="btn btn--ghost btn--small" href={attachment.url} target="_blank" rel="noreferrer">Abrir</a>
-                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachmentForEdit(attachment.id)}>Borrar</button>
+                           <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteActivityAttachment(createdActivity.id, attachment.id)}>Borrar</button>
                         </div>
                       ))}
                     </div>
@@ -2991,11 +3144,13 @@ export default function App() {
   const [noticeAudience, setNoticeAudience] = useState('all')
   const [activityFilter, setActivityFilter] = useState('all')
   const [editingNotice, setEditingNotice] = useState(null)
-  const [editNoticeForm, setEditNoticeForm] = useState({ title: '', content: '', audience: 'all', end_at: '' })
+  const [editNoticeForm, setEditNoticeForm] = useState({ title: '', content: '', label: '', audience: 'all', end_at: '' })
   const [selectedNews, setSelectedNews] = useState(null)
    const [editingNews, setEditingNews] = useState(null)
    const [editNewsForm, setEditNewsForm] = useState({ title: '', excerpt: '', content: '' })
+   const [newsEditFiles, setNewsEditFiles] = useState([])
    const [savingNewsLoading, setSavingNewsLoading] = useState(false)
+   const [uploadingNewsEditLoading, setUploadingNewsEditLoading] = useState(false)
    const [savingNoticeLoading, setSavingNoticeLoading] = useState(false)
    const [deletingNoticeId, setDeletingNoticeId] = useState('')
     const [editingActivity, setEditingActivity] = useState(null)
@@ -3032,6 +3187,7 @@ export default function App() {
     setEditNoticeForm({
       title: notice.title,
       content: notice.content,
+      label: isAllowedLabel(notice.label) ? notice.label : '',
       audience: notice.audience,
       end_at: notice.end_at ? new Date(notice.end_at).toISOString().slice(0, 16) : ''
     })
@@ -3039,7 +3195,7 @@ export default function App() {
 
   function closeEditNotice() {
     setEditingNotice(null)
-    setEditNoticeForm({ title: '', content: '', audience: 'all', end_at: '' })
+    setEditNoticeForm({ title: '', content: '', label: '', audience: 'all', end_at: '' })
   }
 
   function openNews(item) {
@@ -3055,13 +3211,42 @@ export default function App() {
     setEditNewsForm({
       title: newsItem.title,
       excerpt: newsItem.excerpt,
-      content: newsItem.content
+      content: newsItem.content,
+      label: isAllowedLabel(newsItem.label) ? newsItem.label : ''
     })
+    setNewsEditFiles([])
   }
 
   function closeEditNews() {
+    newsEditFiles.forEach((it) => {
+      if (it?.previewUrl) URL.revokeObjectURL(it.previewUrl)
+    })
     setEditingNews(null)
-    setEditNewsForm({ title: '', excerpt: '', content: '' })
+    setEditNewsForm({ title: '', excerpt: '', content: '', label: '' })
+    setNewsEditFiles([])
+  }
+
+  function handleNewsEditFilesChange(e) {
+    const files = Array.from(e.target.files || [])
+    setNewsEditFiles((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
+      })
+      return files.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}`,
+        file,
+        kind: file.type.startsWith('image/') ? 'image' : 'document',
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+      }))
+    })
+  }
+
+  function removeNewsEditFile(fileId) {
+    setNewsEditFiles((prev) => {
+      const target = prev.find((it) => it.id === fileId)
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((it) => it.id !== fileId)
+    })
   }
 
   async function updateNews(e) {
@@ -3076,6 +3261,7 @@ export default function App() {
           title: editNewsForm.title,
           excerpt: editNewsForm.excerpt,
           content: editNewsForm.content,
+          label: isAllowedLabel(editNewsForm.label) ? editNewsForm.label : null,
           status: editingNews.status
         })
       })
@@ -3086,6 +3272,76 @@ export default function App() {
       addToast('Error al actualizar noticia: ' + err.message, { type: 'error' })
     } finally {
       setSavingNewsLoading(false)
+    }
+  }
+
+  async function uploadNewsAttachmentsForEdit(e) {
+    e.preventDefault()
+    if (!token || !editingNews) return
+    const files = Array.from(newsEditFiles || [])
+    if (!files.length) {
+      addToast('Selecciona uno o más archivos', { type: 'warning' })
+      return
+    }
+    setUploadingNewsEditLoading(true)
+    try {
+      const fd = new FormData()
+      for (const it of files) fd.append('file', it.file)
+      const response = await fetch(`${API_BASE}/news/${editingNews.id}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      if (!response.ok) {
+        let detail = 'No se pudieron subir los archivos'
+        try {
+          const json = await response.json()
+          detail = json.detail || detail
+        } catch {
+          // ignore malformed bodies
+        }
+        throw new Error(detail)
+      }
+      const updated = await response.json()
+      setEditingNews(updated)
+      setNewsEditFiles([])
+      await reload()
+      addToast('Archivos agregados a la noticia', { type: 'success' })
+    } catch (err) {
+      addToast('Error al agregar archivos: ' + err.message, { type: 'error' })
+    } finally {
+      setUploadingNewsEditLoading(false)
+    }
+  }
+
+  async function deleteNewsAttachmentForEdit(attachmentId) {
+    if (!token || !editingNews) return
+    try {
+      const updated = await api(`/news/${editingNews.id}/attachments/${attachmentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setEditingNews(updated)
+      await reload()
+      addToast('Adjunto eliminado', { type: 'success' })
+    } catch (err) {
+      addToast('Error al eliminar adjunto: ' + err.message, { type: 'error' })
+    }
+  }
+
+  async function setNewsCoverFromAttachment(url) {
+    if (!token || !editingNews || !url) return
+    try {
+      const updated = await api(`/news/${editingNews.id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cover_image: url }),
+      })
+      setEditingNews(updated)
+      await reload()
+      addToast('Portada actualizada', { type: 'success' })
+    } catch (err) {
+      addToast('Error al actualizar portada: ' + err.message, { type: 'error' })
     }
   }
 
@@ -3307,6 +3563,7 @@ export default function App() {
       const payload = {
         title: editNoticeForm.title,
         content: editNoticeForm.content,
+        label: isAllowedLabel(editNoticeForm.label) ? editNoticeForm.label : null,
         audience: editNoticeForm.audience,
       }
       if (editNoticeForm.end_at) {
@@ -3628,33 +3885,29 @@ export default function App() {
                       </div>
                     </div>
 
-                    <form className="header-auth__avatar-form stack gap-sm" onSubmit={updateMyAvatar}>
-                      <label className="field">
-                        <span>Cambiar foto de perfil</span>
-                        <input type="file" accept="image/*" onChange={(e) => setProfileAvatarFile(e.target.files?.[0] || null)} />
-                      </label>
-                      {profileAvatarError ? <p className="error">{profileAvatarError}</p> : null}
-                      {profileAvatarStatus ? <p className="success">{profileAvatarStatus}</p> : null}
-                      <LoadingButton className="btn btn--ghost btn--small" loading={profileAvatarLoading} disabled={profileAvatarLoading || !profileAvatarFile} type="submit">
-                        {profileAvatarLoading ? 'Guardando...' : 'Guardar foto'}
-                      </LoadingButton>
-                    </form>
+                    <div className="header-auth__menu-title">Opciones de cuenta</div>
 
-                    <button type="button" className="header-auth__menu-item" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','perfil'); goToSection('admin'); setShowUserMenu(false); }}>
+                    <button type="button" className="header-auth__menu-item header-auth__menu-item--profile" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','perfil'); goToSection('admin'); setShowUserMenu(false); }}>
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
-                      <span>Mi perfil</span>
+                      <div>
+                        <strong>Mi perfil</strong>
+                        <small>Ver o editar datos personales</small>
+                      </div>
                     </button>
 
                     {(roleLabel || '').toUpperCase() === 'ADMIN' ? (
-                      <button type="button" className="header-auth__menu-item" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','overview'); goToSection('admin'); setShowUserMenu(false); }}>
+                      <button type="button" className="header-auth__menu-item header-auth__menu-item--admin" role="menuitem" onClick={() => { localStorage.setItem('school-admin-section','overview'); goToSection('admin'); setShowUserMenu(false); }}>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                           <path d="M3 13h8V3H3z" />
                           <path d="M13 21h8v-8h-8z" />
                         </svg>
-                        <span>Administración</span>
+                        <div>
+                          <strong>Administración</strong>
+                          <small>Ir al panel y gestionar contenido</small>
+                        </div>
                       </button>
                     ) : null}
 
@@ -3664,8 +3917,25 @@ export default function App() {
                         <path d="M16 17l5-5-5-5" />
                         <path d="M21 12H9" />
                       </svg>
-                      <span>Cerrar sesión</span>
+                      <div>
+                        <strong>Cerrar sesión</strong>
+                        <small>Salir de la cuenta actual</small>
+                      </div>
                     </button>
+
+                    <div className="header-auth__menu-title header-auth__menu-title--secondary">Cambiar foto de perfil</div>
+
+                    <form className="header-auth__avatar-form stack gap-sm" onSubmit={updateMyAvatar}>
+                      <label className="field">
+                        <span>Selecciona una imagen</span>
+                        <input type="file" accept="image/*" onChange={(e) => setProfileAvatarFile(e.target.files?.[0] || null)} />
+                      </label>
+                      {profileAvatarError ? <p className="error">{profileAvatarError}</p> : null}
+                      {profileAvatarStatus ? <p className="success">{profileAvatarStatus}</p> : null}
+                      <LoadingButton className="btn btn--ghost btn--small" loading={profileAvatarLoading} disabled={profileAvatarLoading || !profileAvatarFile} type="submit">
+                        {profileAvatarLoading ? 'Guardando...' : 'Guardar foto'}
+                      </LoadingButton>
+                    </form>
                   </div>
                 ) : (
                   <AuthPanel
@@ -3723,13 +3993,13 @@ export default function App() {
                   <button className="btn" onClick={() => goToSection('noticias')} type="button">
                     {profile?.hero_cta || 'Más información'}
                   </button>
-                  <button className="btn btn--ghost" onClick={() => goToSection('acceso')} type="button">Iniciar sesión</button>
+                    <button className="btn btn--ghost" onClick={() => goToSection('acceso')} type="button">Iniciar sesión</button>
                 </div>
                 <div className="hero__stats">
                   <div><strong>{news.length}</strong><span>Noticias</span></div>
                   <div><strong>{notices.length}</strong><span>Avisos</span></div>
                   <div><strong>{activities.length}</strong><span>Actividades</span></div>
-                  <div><strong>{galleries.length}</strong><span>Galerías</span></div>
+                    <div><strong>{galleries.length}</strong><span>Galerías</span></div>
                 </div>
               </div>
               <div className="hero__image">
@@ -3742,97 +4012,84 @@ export default function App() {
             </section>
 
             <section className="grid grid--2">
-               <Card title="Últimas noticias" subtitle="Noticias publicadas">
+                <Card title="Últimas noticias" subtitle="Noticias publicadas" className="home-news-container home-news-card">
                  {loading ? (
                    <LoadingState message="Cargando noticias..." />
                  ) : filteredNews.length === 0 ? (
                    <EmptyState message="Sin noticias por ahora." />
-                 ) : (
-                   <div className="news-feed news-feed--compact">
-                     {sortedNews.slice(0, 3).map((item) => (
-                         <NewsPostCard key={item.id} item={item} compact onOpen={openNews} canEdit={token && (roleLabel === 'ADMIN' || item.author_id === userId)} onEdit={openEditNews} />
-                     ))}
-                   </div>
-                 )}
+                  ) : (
+                    <>
+                      <div className="news-feed news-feed--home">
+                        {sortedNews.slice(0, 3).map((item) => (
+                          <NewsPostCard key={item.id} item={item} compact onOpen={openNews} canEdit={token && (roleLabel === 'ADMIN' || item.author_id === userId)} onEdit={openEditNews} />
+                        ))}
+                      </div>
+                      <div className="home-news-cta">
+                        <button className="home-news-cta__button" type="button" onClick={() => goToSection('noticias')}>Ver todas las noticias</button>
+                      </div>
+                    </>
+                  )}
                </Card>
 
-               <Card title="Avisos importantes" subtitle="Comunicados oficiales">
+                              <Card title="Avisos importantes" subtitle="Comunicados oficiales" className="card--notices">
                  {loading ? (
                    <LoadingState message="Cargando avisos..." />
                  ) : filteredNotices.length === 0 ? (
                    <EmptyState message="Sin avisos por ahora." />
                  ) : (
                    <div className="stack gap-sm">
-                      {filteredNotices.slice(0, 3).map((item) => {
-                        const noticeType = (item.type || item.notice_type || item.kind || item.category || item.icon || '').toString().toLowerCase()
-                        function NoticeIcon() {
-                          if (noticeType.includes('reunion') || noticeType.includes('meeting') || noticeType.includes('calendar')) {
-                            return (
-                              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <rect x="3" y="5" width="18" height="16" rx="2" />
-                                <path d="M16 3v4M8 3v4" />
-                                <path d="M3 11h18" />
-                              </svg>
-                            )
-                          }
-                          if (noticeType.includes('entrega') || noticeType.includes('delivery') || noticeType.includes('paper') || noticeType.includes('boletin')) {
-                            return (
-                              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <path d="M21 15V6a2 2 0 0 0-2-2H7L3 6v9a2 2 0 0 0 2 2h14a0 0 0 0 0 0" />
-                                <path d="M21 15l-5-5-5 5" />
-                              </svg>
-                            )
-                          }
-                          // default: megaphone / speaker
-                          return (
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                              <path d="M3 11v2a2 2 0 0 0 2 2h3l6 3V6L8 9H5a2 2 0 0 0-2 2z" />
-                              <path d="M19 7a7 7 0 0 1 0 10" />
-                            </svg>
-                          )
-                        }
-
-                        return (
-                          <div key={item.id} className="notice-row">
-                            <div className="notice-row__icon" aria-hidden>
-                              <NoticeIcon />
-                            </div>
-                            <div>
-                              <strong>{item.title}</strong>
-                              <p>{item.content}</p>
-                              <small>{item.audience || 'all'} • {formatDateTime(item.end_at || item.created_at)}</small>
-                            </div>
+                     {filteredNotices.slice(0, 3).map((item) => (
+                       <div key={item.id} className="notice-row">
+                         <div className="notice-row__icon" aria-hidden>
+                           <NoticeIcon />
+                         </div>
+                          <div>
+                            {item.label ? <span className={`notice-badge ${getNoticeBadgeClass(item.label)}`}>{getLabelName(item.label)}</span> : null}
+                            <strong>{item.title}</strong>
+                            <p>{item.content}</p>
+                            <small>{item.audience || 'all'} • {formatDate(item.end_at || item.created_at)}</small>
                           </div>
-                        )
-                      })}
-                   </div>
+                        </div>
+                      ))}
+                    </div>
                  )}
                </Card>
             </section>
 
-            <section className="grid grid--3">
-              <Card title="Actividad destacada" subtitle={latestActivity?.activity_type || 'Actividad'}>
+            <section className="grid grid--2">
+              <Card title="Actividad destacada" subtitle={latestActivity?.activity_type || 'Actividad'} className="home-activity-card activity-card activity-card--featured">
                 {latestActivity ? (
                   <>
-                    <strong>{latestActivity.title}</strong>
-                    <p>{latestActivity.description}</p>
-                    <small>{formatDate(latestActivity.date)}</small>
+                    {(() => {
+                      const media = splitActivityMedia(latestActivity)
+                      const firstImage = media.images[0]
+                      const firstVideo = media.videos[0]
+                      return (firstImage || firstVideo) ? (
+                        <div className="home-activity-media">
+                          {firstImage ? (
+                            <img src={firstImage.url} alt={firstImage.caption || firstImage.filename || latestActivity.title} />
+                          ) : (
+                            <video controls preload="metadata" src={firstVideo.url} />
+                          )}
+                        </div>
+                      ) : null
+                    })()}
+                    <div className="home-activity-body">
+                      <strong>{latestActivity.title}</strong>
+                      <p>{latestActivity.description}</p>
+                      <small>{latestActivity.location ? `📍 ${latestActivity.location} · ` : ''}{formatDate(latestActivity.date)}</small>
+                    </div>
                   </>
                 ) : (
                   <p className="state-empty">No hay actividades registradas.</p>
                 )}
               </Card>
-              <Card title="Galería destacada" subtitle={recentAlbums[0] ? `${recentAlbums[0].images_count || 0} imágenes` : 'Galería'}>
+              <Card title="Galería destacada" subtitle={recentAlbums[0] ? `${recentAlbums[0].images_count || 0} imágenes` : 'Galería'} className="home-gallery-card">
                 {recentAlbums.length ? (
                   <AlbumFeaturedCarousel albums={recentAlbums} onOpen={setSelectedAlbum} />
                 ) : (
                   <p className="state-empty">No hay galerías registradas.</p>
                 )}
-              </Card>
-              <Card title="Contacto institucional" subtitle="Datos dinámicos">
-                <p><strong>Dirección:</strong> {profile?.address || 'Sin dirección registrada'}</p>
-                <p><strong>Teléfono:</strong> {profile?.phone || 'Sin teléfono registrado'}</p>
-                <p><strong>Correo:</strong> {profile?.email || 'Sin correo registrado'}</p>
               </Card>
             </section>
           </>
@@ -3861,7 +4118,10 @@ export default function App() {
               <div className="grid grid--3">
                 {filteredNotices.map((item) => (
                   <Card key={item.id} title={item.title} subtitle={item.audience || 'all'}>
-                    <p>{item.content}</p>
+                    <div className="notice-card">
+                      {item.label ? <span className={`notice-badge ${getNoticeBadgeClass(item.label)}`}>{getLabelName(item.label)}</span> : null}
+                      <p>{item.content}</p>
+                    </div>
                     {item.created_by_name && <small className="notice-creator">Creador: {item.created_by_name}</small>}
                     <small>Publicado: {formatDateTime(item.created_at)}</small>
                     {item.end_at && <small>Vence: {formatDate(item.end_at)}</small>}
@@ -3883,6 +4143,12 @@ export default function App() {
                 <Card title="Editar aviso" subtitle="Actualiza los campos que desees cambiar">
                   <form className="stack gap-sm" onSubmit={updateNotice} onClick={(e) => e.stopPropagation()}>
                     <label className="field"><span>Título</span><input value={editNoticeForm.title} onChange={(e) => setEditNoticeForm((p) => ({ ...p, title: e.target.value }))} /></label>
+                    <label className="field"><span>Etiqueta / categoría</span>
+                      <select value={editNoticeForm.label} onChange={(e) => setEditNoticeForm((p) => ({ ...p, label: e.target.value }))}>
+                        <option value="">Sin etiqueta</option>
+                        {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
+                      </select>
+                    </label>
                     <label className="field"><span>Contenido</span><textarea rows="4" value={editNoticeForm.content} onChange={(e) => setEditNoticeForm((p) => ({ ...p, content: e.target.value }))} /></label>
                     <label className="field">
                       <span>Audiencia</span>
@@ -3943,13 +4209,90 @@ export default function App() {
             <Card title={`Editar noticia: ${editingNews.title.substring(0, 40)}...`} subtitle={`Creada por: ${editingNews.author_name || 'Redacción'}`}>
               <form className="stack gap-sm" onSubmit={updateNews} onClick={(e) => e.stopPropagation()}>
                 <label className="field"><span>Título</span><input value={editNewsForm.title} onChange={(e) => setEditNewsForm((p) => ({ ...p, title: e.target.value }))} /></label>
+                    <label className="field"><span>Etiqueta / categoría</span>
+                      <select value={editNewsForm.label} onChange={(e) => setEditNewsForm((p) => ({ ...p, label: e.target.value }))}>
+                        <option value="">Sin etiqueta</option>
+                        {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
+                      </select>
+                    </label>
                 <label className="field"><span>Resumen</span><input value={editNewsForm.excerpt} onChange={(e) => setEditNewsForm((p) => ({ ...p, excerpt: e.target.value }))} /></label>
                 <label className="field"><span>Contenido</span><textarea rows="5" value={editNewsForm.content} onChange={(e) => setEditNewsForm((p) => ({ ...p, content: e.target.value }))} /></label>
                 <div className="admin-actions">
-                  <button className="btn" type="submit">Guardar cambios</button>
+                  <LoadingButton className="btn" loading={savingNewsLoading} type="submit">Guardar cambios</LoadingButton>
                   <button className="btn btn--ghost" type="button" onClick={closeEditNews}>Cancelar</button>
                 </div>
               </form>
+              
+              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--line)' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700 }}>Archivos e imagen de portada</h4>
+                <form className="stack gap-sm" onSubmit={uploadNewsAttachmentsForEdit} onClick={(e) => e.stopPropagation()}>
+                  <label className="field">
+                    <span>Subir archivos o imágenes</span>
+                    <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip,.rar" onChange={handleNewsEditFilesChange} />
+                  </label>
+                  {newsEditFiles.length ? <NewsFilePreviewList files={newsEditFiles} onRemove={removeNewsEditFile} /> : null}
+                  <LoadingButton className="btn btn--ghost btn--small" loading={uploadingNewsEditLoading} type="submit">Agregar</LoadingButton>
+                </form>
+                {editingNews.cover_image && (
+                  <div style={{ marginBottom: 12, padding: '12px', border: '2px solid var(--primary)', borderRadius: '12px', background: 'rgba(109, 40, 217, 0.05)' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>Portada actual:</p>
+                    <img src={editingNews.cover_image} alt="Portada" style={{ width: '100%', borderRadius: '8px', maxHeight: '140px', objectFit: 'cover' }} />
+                  </div>
+                )}
+                {Array.isArray(editingNews.attachments) && editingNews.attachments.filter((att) => att.kind === 'image').length > 0 ? (
+                  <div>
+                    <p style={{ margin: '12px 0 8px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>Elige una imagen como portada:</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
+                      {editingNews.attachments.filter((att) => att.kind === 'image').map((att) => (
+                        <button
+                          key={att.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setNewsCoverFromAttachment(att.url)
+                          }}
+                          style={{
+                            border: editingNews.cover_image === att.url ? '3px solid var(--primary)' : '1px solid var(--line)',
+                            borderRadius: '8px',
+                            padding: 0,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            opacity: editingNews.cover_image === att.url ? 1 : 0.7,
+                          }}
+                          title={att.filename}
+                        >
+                          <img src={att.url} alt={att.filename} style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {Array.isArray(editingNews.attachments) && editingNews.attachments.length > 0 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <p style={{ margin: '12px 0 8px 0', fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>Administrar adjuntos:</p>
+                    <div className="news-draft-manager__list">
+                      {editingNews.attachments.map((attachment) => (
+                        <div key={attachment.id || attachment.url} className="news-draft-item">
+                          {attachment.kind === 'image' ? (
+                            <div className="news-draft-item__thumb"><img src={attachment.url} alt={attachment.caption || attachment.filename} /></div>
+                          ) : (
+                            <div className="news-draft-item__thumb news-draft-item__thumb--doc"><strong>{(attachment.filename || 'DOC').split('.').pop()?.toUpperCase()}</strong></div>
+                          )}
+                          <div className="news-draft-item__body">
+                            <strong>{attachment.filename}</strong>
+                            <small>{attachment.caption || attachment.content_type || attachment.kind || 'Adjunto'}</small>
+                          </div>
+                          <a className="btn btn--ghost btn--small" href={attachment.url} target="_blank" rel="noreferrer">Abrir</a>
+                          <button className="btn btn--ghost btn--small" type="button" onClick={() => deleteNewsAttachmentForEdit(attachment.id)}>Borrar</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="state-empty" style={{ marginTop: 12 }}>Esta noticia no tiene archivos adjuntos.</p>
+                )}
+              </div>
             </Card>
           </div>
         )}
@@ -3986,7 +4329,7 @@ export default function App() {
                 <h4 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 700 }}>Imágenes y portada</h4>
 
                 <form className="stack gap-sm" onSubmit={uploadActivityImagesForEdit} onClick={(e) => e.stopPropagation()}>
-                  <label className="field"><span>📸 Subir más imágenes</span><input type="file" accept="image/*" multiple onChange={handleActivityImageEditFilesChange} /></label>
+                  <label className="field"><span>ðŸ“¸ Subir más imágenes</span><input type="file" accept="image/*" multiple onChange={handleActivityImageEditFilesChange} /></label>
                   {activityImageEditFiles.length ? (
                     <ActivityFilePreviewList files={activityImageEditFiles.map((it) => ({ id: it.id, file: it.file, previewUrl: it.previewUrl, kind: it.kind }))} onRemove={removeActivityImageEditFile} />
                   ) : null}
@@ -4085,7 +4428,7 @@ export default function App() {
             ) : (
               <div className="grid grid--3">
                 {filteredActivities.map((item) => (
-                  <Card key={item.id} title={item.title} subtitle={item.activity_type || 'Actividad'}>
+                  <Card key={item.id} title={item.title} subtitle={item.activity_type || 'Actividad'} className="activity-card">
                     {(() => {
                       const media = splitActivityMedia(item)
                       const firstImage = media.images[0]
@@ -4107,7 +4450,7 @@ export default function App() {
                     })()}
                     <p>{item.description}</p>
                     {item.location ? <small>{item.location}</small> : null}
-                    {item.date ? <small>Evento: {formatDateTime(item.date)}</small> : null}
+                    {item.date ? <small>Evento: {formatDate(item.date)}</small> : null}
                     {item.publish_at ? <small>Publicado: {formatDateTime(item.publish_at)}</small> : null}
                     {token && ((roleLabel || '').toUpperCase() === 'ADMIN' || item.created_by === userId) ? (
                       <div className="admin-actions" style={{ marginTop: '8px', gap: '6px' }}>
@@ -4144,6 +4487,61 @@ export default function App() {
             </section>
           );
         })()}
+
+        {activeSection === 'contacto' && (
+          <section>
+            <SectionTitle kicker="Contacto" title="Datos de contacto" description="Información de contacto de la unidad educativa." />
+            <div className="grid grid--2">
+              <Card title="Información de contacto" subtitle="Datos institucionales">
+                <div className="stack gap-sm">
+                  <div className="footer__item">
+                    <span className="footer__icon" aria-hidden="true">📍</span>
+                    <div>
+                      <strong>Dirección</strong>
+                      <span>{profile?.address || 'Sin dirección registrada'}</span>
+                    </div>
+                  </div>
+                  <div className="footer__item">
+                    <span className="footer__icon" aria-hidden="true">📞</span>
+                    <div>
+                      <strong>Teléfono</strong>
+                      <span>{profile?.phone || 'Sin teléfono registrado'}</span>
+                    </div>
+                  </div>
+                  <div className="footer__item">
+                    <span className="footer__icon" aria-hidden="true">✉️</span>
+                    <div>
+                      <strong>Correo</strong>
+                      <span>{profile?.email || 'Sin correo registrado'}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              <Card title="Redes sociales" subtitle="Síguenos">
+                <div className="stack gap-sm">
+                  {profile?.facebook_url ? (
+                    <a className="btn btn--ghost" href={profile.facebook_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <SocialIcon network="facebook" />
+                      Facebook
+                    </a>
+                  ) : <p className="state-empty">Sin Facebook registrado</p>}
+                  {profile?.instagram_url ? (
+                    <a className="btn btn--ghost" href={profile.instagram_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <SocialIcon network="instagram" />
+                      Instagram
+                    </a>
+                  ) : null}
+                  {profile?.youtube_url ? (
+                    <a className="btn btn--ghost" href={profile.youtube_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <SocialIcon network="youtube" />
+                      YouTube
+                    </a>
+                  ) : null}
+                </div>
+              </Card>
+            </div>
+          </section>
+        )}
 
         {activeSection === 'historia' && (
           <section>
@@ -4210,27 +4608,27 @@ export default function App() {
       {selectedAlbum ? <AlbumViewerModal album={selectedAlbum} onClose={() => setSelectedAlbum(null)} /> : null}
 
       <footer className="footer">
-        <div className="footer__col footer__brand">
+                <div className="footer__col footer__brand">
           <strong>{profile?.school_name || 'U.E. Sagrado Corazón 4'}</strong>
           <p>{profile?.tagline || 'Formamos con valores, educamos para la vida.'}</p>
         </div>
         <div className="footer__col">
           <div className="footer__item">
-            <span className="footer__icon" aria-hidden="true">📍</span>
+            <span className="footer__icon" aria-hidden="true"><FooterInfoIcon kind="location" /></span>
             <div>
               <strong>Dirección</strong>
               <span>{profile?.address || 'San Juan de Yapacaní, Bolivia'}</span>
             </div>
           </div>
           <div className="footer__item">
-            <span className="footer__icon" aria-hidden="true">📞</span>
+            <span className="footer__icon" aria-hidden="true"><FooterInfoIcon kind="phone" /></span>
             <div>
               <strong>Teléfono</strong>
               <span>{profile?.phone || '+591 3 1234567'}</span>
             </div>
           </div>
           <div className="footer__item">
-            <span className="footer__icon" aria-hidden="true">✉️</span>
+            <span className="footer__icon" aria-hidden="true"><FooterInfoIcon kind="mail" /></span>
             <div>
               <strong>Correo</strong>
               <span>{profile?.email || 'uesagradocorazon4@gmail.com'}</span>
@@ -4262,3 +4660,6 @@ export default function App() {
     </AppErrorBoundary>
   )
 }
+
+
+
