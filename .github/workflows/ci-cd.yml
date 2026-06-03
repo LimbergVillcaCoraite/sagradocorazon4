@@ -192,5 +192,9 @@ jobs:
             EOF
 
             $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --build
+
+            # Run pending Alembic migrations after containers are up
+            $COMPOSE_CMD -f docker-compose.prod.yml exec -T backend alembic upgrade heads
+
             docker image prune -f
 
