@@ -109,9 +109,10 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: [docker-build]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && secrets.PROD_HOST != ''
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to production server
+        if: ${{ secrets.PROD_HOST != '' }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -129,27 +130,23 @@ jobs:
             git fetch --all --prune
             git reset --hard origin/main
 
-            # Write secrets to .env.prod
-            cat > "$APP_DIR/.env.prod" <<ENVEOF
+            # Write secrets to .env.prod (no leading spaces — heredoc content starts at col 0)
+            cat > "$APP_DIR/.env.prod" << 'ENVEOF'
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
             ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_NAME=${{ secrets.ADMIN_NAME:-Administrador }}
+            ADMIN_NAME=${{ secrets.ADMIN_NAME || 'Administrador' }}
             ENVEOF
 
-            # Pull latest images from GHCR (built by docker-build job)
+            # Pull pre-built images from GHCR (produced by docker-build job)
             docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest
             docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest
 
-            # Tag as prod so docker-compose.prod.yml image references resolve
-            docker tag ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest localhost/sagradocorazon4-backend:prod
-            docker tag ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest localhost/sagradocorazon4-frontend:prod
-
-            # Restart with new images, no rebuild needed
+            # Restart stack with new images — no rebuild on server
             $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod down
             $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
 
-            # Apply any pending DB migrations
+            # Apply any pending DB migrations once backend is ready
             sleep 10
             $COMPOSE_CMD -f docker-compose.prod.yml exec -T backend alembic upgrade heads
 
