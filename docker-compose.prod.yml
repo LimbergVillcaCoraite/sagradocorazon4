@@ -1,6 +1,7 @@
 services:
   postgres:
     image: docker.io/postgres:15
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
@@ -19,6 +20,7 @@ services:
 
   minio:
     image: docker.io/minio/minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -30,6 +32,7 @@ services:
 
   backend:
     image: localhost/sagradocorazon4-backend:prod
+    restart: unless-stopped
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -62,6 +65,7 @@ services:
 
   frontend:
     image: localhost/sagradocorazon4-frontend:prod
+    restart: unless-stopped
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -79,6 +83,7 @@ services:
 
   caddy:
     image: docker.io/library/caddy:2.8-alpine
+    restart: unless-stopped
     depends_on:
       - backend
       - frontend
