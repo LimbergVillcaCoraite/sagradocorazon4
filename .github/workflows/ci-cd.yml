@@ -123,7 +123,6 @@ jobs:
             cd /opt/sagradoCorazon4
             git fetch --all --prune
             git reset --hard origin/main
-            python3 -c "open('.env.prod','w').write('SECRET_KEY=${{ secrets.SECRET_KEY }}\nADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}\nADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}\nADMIN_NAME=Administrador\n')"
             docker build --no-cache -t localhost/sagradocorazon4-backend:prod ./backend
             docker build --no-cache -t localhost/sagradocorazon4-frontend:prod ./frontend
             podman-compose -f docker-compose.prod.yml --env-file .env.prod down
