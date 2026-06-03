@@ -1,4 +1,4 @@
-sagradocorazon4.duck.dns.org {
+sagradocorazon4.duckdns.org {
   encode gzip zstd
 
   @api path /api/*

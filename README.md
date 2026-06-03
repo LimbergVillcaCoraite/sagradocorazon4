@@ -92,12 +92,12 @@ docker-compose -f docker-compose.prod.yml up --build
 
 Con Caddy, el sitio queda expuesto en:
 
-- `http://sagradocorazon4.duck.dns.org`
-- `https://sagradocorazon4.duck.dns.org` (certificado TLS gratuito automático)
+- `http://sagradocorazon4.duckdns.org`
+- `https://sagradocorazon4.duckdns.org` (certificado TLS gratuito automático)
 
 ### Requisitos para TLS automático (Caddy)
 
-- El dominio `sagradocorazon4.duck.dns.org` debe apuntar al IP público del servidor.
+- El dominio `sagradocorazon4.duckdns.org` debe apuntar al IP público del servidor.
 - Deben estar abiertos los puertos `80` y `443` en firewall/security group.
 - Caddy debe conservar los volúmenes `caddy_data` y `caddy_config` para persistir certificados.
 
