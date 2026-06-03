@@ -191,7 +191,7 @@ jobs:
             SECRET_KEY=${{ secrets.SECRET_KEY }}
             EOF
 
-            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --build
+            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --build --force-recreate
 
             # Run pending Alembic migrations after containers are up
             $COMPOSE_CMD -f docker-compose.prod.yml exec -T backend alembic upgrade heads
