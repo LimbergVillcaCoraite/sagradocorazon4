@@ -1,0 +1,119 @@
+"""Assign A/B/C labels to existing news items based on keywords.
+
+The script is intentionally conservative:
+- it only updates items when a keyword rule matches;
+- it keeps already-valid labels A/B/C untouched;
+- it prints a detailed per-label report at the end.
+"""
+import asyncio
+import re
+from collections import defaultdict
+
+from typing import Optional
+
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLAsyncSession
+
+from app.db import engine
+from app.models import News
+from app.session_ops import session_exec, session_commit
+
+ALLOWED_LABELS = ("A", "B", "C")
+
+# Heuristic mapping:
+#   A -> video / deporte
+#   B -> pruebas / imágenes / contenido genérico
+#   C -> efemérides / cultura / comunidad
+KEYWORD_RULES = [
+    (r"\bvideo\b|deport|futbol|fútbol|basquet|básquet|torneo|campeon|competenc", "A"),
+    (r"dia de la madre|madre|cultur|arte|musica|música|teatro|danza|medio ambiente|medioambiente|ambient|ecolog|salud|comunidad", "C"),
+    (r"test|ascii|image|imagen|resumen|concurso|upload|attach|archivo|media", "B"),
+]
+
+
+def classify_news(news: News) -> Optional[str]:
+    text = " ".join([str(getattr(news, field) or "") for field in ("title", "excerpt", "content")]).lower().strip()
+    for pattern, label in KEYWORD_RULES:
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            return label
+
+    title = str(getattr(news, "title", "") or "").lower().strip()
+    if title == "video":
+        return "A"
+    if title.startswith("dia de la madre"):
+        return "C"
+    if title.startswith("test") or "image" in title or "ascii" in title or "resumen" in title or "concurso" in title:
+        return "B"
+    return None
+
+
+async def assign_labels():
+    summary = {
+        "total": 0,
+        "kept": 0,
+        "updated": 0,
+        "unclassified": 0,
+        "by_label": defaultdict(list),
+        "updated_items": [],
+        "unclassified_items": [],
+    }
+
+    async with SQLAsyncSession(engine) as session:
+        result = await session_exec(session, select(News).order_by(News.created_at.desc()))
+        news_list = result.all()
+        summary["total"] = len(news_list)
+
+        for news in news_list:
+            current_label = getattr(news, "label", None)
+            suggested_label = classify_news(news)
+
+            if current_label in ALLOWED_LABELS and current_label == suggested_label:
+                summary["kept"] += 1
+                summary["by_label"][current_label].append(news)
+                continue
+
+            if suggested_label:
+                if current_label != suggested_label:
+                    news.label = suggested_label
+                    session.add(news)
+                    summary["updated"] += 1
+                    summary["updated_items"].append((news, current_label, suggested_label))
+                summary["by_label"][suggested_label].append(news)
+                continue
+
+            summary["unclassified"] += 1
+            summary["unclassified_items"].append((news, current_label))
+
+        if summary["updated"]:
+            await session_commit(session)
+
+    print("=== Label assignment report ===")
+    print(f"Total noticias: {summary['total']}")
+    print(f"Etiquetas conservadas: {summary['kept']}")
+    print(f"Etiquetas actualizadas: {summary['updated']}")
+    print(f"Sin coincidencia: {summary['unclassified']}")
+    print("")
+
+    for label in ALLOWED_LABELS:
+        items = summary["by_label"].get(label, [])
+        print(f"[{label}] {len(items)} noticia(s)")
+        for news in items:
+            print(f"  - {news.title} ({news.id})")
+        print("")
+
+    if summary["updated_items"]:
+        print("Noticias etiquetadas/ajustadas en esta ejecución:")
+        for news, old_label, new_label in summary["updated_items"]:
+            print(f"  - {news.title} ({news.id}) | {old_label or 'sin etiqueta'} -> {new_label}")
+        print("")
+
+    if summary["unclassified_items"]:
+        print("Noticias sin coincidencia (requieren revisión manual):")
+        for news, current_label in summary["unclassified_items"]:
+            suffix = f" | etiqueta actual: {current_label}" if current_label else ""
+            print(f"  - {news.title} ({news.id}){suffix}")
+
+
+if __name__ == "__main__":
+    asyncio.run(assign_labels())
+

@@ -76,6 +76,7 @@ async def serialize_news(news: News, session: AsyncSession) -> NewsRead:
         slug=news.slug,
         excerpt=news.excerpt,
         content=news.content or '',
+        label=news.label,
         cover_image=_public_url(news.cover_image),
         attachments=[
             # Normalize attachments: ensure url is public and adjust kind based on content_type
@@ -174,6 +175,7 @@ async def create_news(
         slug=slug,
         excerpt=news_data.excerpt,
         content=news_data.content,
+        label=news_data.label,
         cover_image=news_data.cover_image,
         status=news_data.status or "draft",
         author_id=user_id,
@@ -348,6 +350,8 @@ async def update_news(
         news.excerpt = news_data.excerpt
     if news_data.content:
         news.content = news_data.content
+    if news_data.label is not None:
+        news.label = news_data.label
     if news_data.cover_image is not None:
         news.cover_image = news_data.cover_image
     if news_data.status:
