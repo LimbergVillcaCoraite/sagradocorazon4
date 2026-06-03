@@ -31,7 +31,7 @@ services:
       - internal
 
   backend:
-    image: ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest
+    image: localhost/sagradocorazon4-backend:prod
     restart: unless-stopped
     build:
       context: ./backend
@@ -64,7 +64,7 @@ services:
       retries: 5
 
   frontend:
-    image: ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest
+    image: localhost/sagradocorazon4-frontend:prod
     restart: unless-stopped
     build:
       context: ./frontend

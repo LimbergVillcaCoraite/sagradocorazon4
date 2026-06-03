@@ -122,32 +122,31 @@ jobs:
           script: |
             set -e
             APP_DIR=/opt/sagradoCorazon4
-            COMPOSE_CMD=podman-compose
-
-            # Update source code
             cd "$APP_DIR"
+
+            # Pull latest code
             git fetch --all --prune
             git reset --hard origin/main
 
-            # Write secrets to .env.prod (no leading spaces — heredoc content starts at col 0)
-            cat > "$APP_DIR/.env.prod" << 'ENVEOF'
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_NAME=${{ secrets.ADMIN_NAME || 'Administrador' }}
-            ENVEOF
+            # Write .env.prod
+            printf 'SECRET_KEY=%s\nADMIN_EMAIL=%s\nADMIN_PASSWORD=%s\nADMIN_NAME=%s\n' \
+              '${{ secrets.SECRET_KEY }}' \
+              '${{ secrets.ADMIN_EMAIL }}' \
+              '${{ secrets.ADMIN_PASSWORD }}' \
+              '${{ secrets.ADMIN_NAME || "Administrador" }}' \
+              > .env.prod
 
-            # Pull pre-built images from GHCR (produced by docker-build job)
-            docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest
-            docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest
+            # Build images with the exact tags docker-compose.prod.yml uses
+            docker build --no-cache -t localhost/sagradocorazon4-backend:prod ./backend
+            docker build --no-cache -t localhost/sagradocorazon4-frontend:prod ./frontend
 
-            # Restart stack with new images — no rebuild on server
-            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod down
-            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
+            # Restart stack with new images
+            podman-compose -f docker-compose.prod.yml --env-file .env.prod down
+            podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
 
-            # Apply any pending DB migrations once backend is ready
+            # Apply pending DB migrations
             sleep 10
-            $COMPOSE_CMD -f docker-compose.prod.yml exec -T backend alembic upgrade heads
+            podman-compose -f docker-compose.prod.yml exec -T backend alembic upgrade heads
 
             docker image prune -f
 
