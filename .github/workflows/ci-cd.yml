@@ -121,32 +121,18 @@ jobs:
           script_stop: true
           script: |
             set -e
-            APP_DIR=/opt/sagradoCorazon4
-            cd "$APP_DIR"
-
-            # Pull latest code
+            cd /opt/sagradoCorazon4
             git fetch --all --prune
             git reset --hard origin/main
-
-            # Write .env.prod
-            printf 'SECRET_KEY=%s\nADMIN_EMAIL=%s\nADMIN_PASSWORD=%s\nADMIN_NAME=%s\n' \
-              '${{ secrets.SECRET_KEY }}' \
-              '${{ secrets.ADMIN_EMAIL }}' \
-              '${{ secrets.ADMIN_PASSWORD }}' \
-              '${{ secrets.ADMIN_NAME || "Administrador" }}' \
-              > .env.prod
-
-            # Build images with the exact tags docker-compose.prod.yml uses
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env.prod
+            echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.prod
+            echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.prod
+            echo "ADMIN_NAME=Administrador" >> .env.prod
             docker build --no-cache -t localhost/sagradocorazon4-backend:prod ./backend
             docker build --no-cache -t localhost/sagradocorazon4-frontend:prod ./frontend
-
-            # Restart stack with new images
             podman-compose -f docker-compose.prod.yml --env-file .env.prod down
             podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
-
-            # Apply pending DB migrations
             sleep 10
             podman-compose -f docker-compose.prod.yml exec -T backend alembic upgrade heads
-
             docker image prune -f
 
