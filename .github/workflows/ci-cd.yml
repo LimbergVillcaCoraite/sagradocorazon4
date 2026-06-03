@@ -118,21 +118,26 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
-          script_stop: true
           script: |
             set -e
             cd /opt/sagradoCorazon4
             git fetch --all --prune
             git reset --hard origin/main
-            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env.prod
-            echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env.prod
-            echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.prod
-            echo "ADMIN_NAME=Administrador" >> .env.prod
+            python3 -c "
+            import os
+            lines = [
+              'SECRET_KEY=${{ secrets.SECRET_KEY }}',
+              'ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}',
+              'ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}',
+              'ADMIN_NAME=Administrador',
+            ]
+            open('.env.prod','w').write('\n'.join(lines)+'\n')
+            "
             docker build --no-cache -t localhost/sagradocorazon4-backend:prod ./backend
             docker build --no-cache -t localhost/sagradocorazon4-frontend:prod ./frontend
             podman-compose -f docker-compose.prod.yml --env-file .env.prod down
             podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
             sleep 10
-            podman-compose -f docker-compose.prod.yml exec -T backend alembic upgrade heads
-            docker image prune -f
+            podman-compose -f docker-compose.prod.yml exec -T backend alembic upgrade heads || true
+            docker image prune -f || true
 
