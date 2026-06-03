@@ -28,8 +28,8 @@ async def ensure_bucket_exists():
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(executor, _ensure_bucket_exists_sync)
-    except S3Error as e:
-        print(f"Error ensuring bucket: {e}")
+    except Exception as e:
+        print(f"Warning: MinIO bucket setup skipped: {e}")
 
 def _ensure_bucket_exists_sync():
     """Synchronous version of ensure_bucket_exists."""
