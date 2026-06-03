@@ -552,8 +552,8 @@ async def update_image(
 
     if image_data.alt_text is not None:
         image.alt_text = image_data.alt_text
-    if image_data.gallery_id is not None:
-        image.gallery_id = image_data.gallery_id
+    if image_data.album_id is not None:
+        image.album_id = image_data.album_id
 
     session.add(image)
     await session_commit(session)

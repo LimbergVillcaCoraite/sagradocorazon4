@@ -118,7 +118,7 @@ def test_get_gallery(client: TestClient, session: Session):
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Test Gallery"
-    assert "images" in data
+    assert "albums" in data
 
 
 def test_upload_image(client: TestClient, session: Session):
