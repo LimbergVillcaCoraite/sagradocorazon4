@@ -111,7 +111,7 @@ async def list_galleries(
 
 @router.get("/galleries/{gallery_id}", response_model=GalleryDetailRead)
 async def get_gallery(
-    gallery_id: str,
+    gallery_id: UUID,
     session: AsyncSession = Depends(get_session)
 ):
     """Get gallery with all albums."""
@@ -494,7 +494,7 @@ async def update_gallery(
 
 @router.delete("/galleries/{gallery_id}")
 async def delete_gallery(
-    gallery_id: str,
+    gallery_id: UUID,
     user_id: UUID = Depends(get_current_user),
     _: UUID = Depends(require_role("ADMIN")),
     session: AsyncSession = Depends(get_session)
@@ -537,7 +537,7 @@ async def delete_gallery(
 # IMAGE ENDPOINTS
 @router.put("/images/{image_id}", response_model=ImageRead)
 async def update_image(
-    image_id: str,
+    image_id: UUID,
     image_data: ImageUpdate,
     user_id: UUID = Depends(get_current_user),
     _: UUID = Depends(require_role("ADMIN")),
@@ -562,7 +562,7 @@ async def update_image(
 
 @router.delete("/images/{image_id}")
 async def delete_image(
-    image_id: str,
+    image_id: UUID,
     user_id: UUID = Depends(get_current_user),
     _: UUID = Depends(require_role("ADMIN")),
     session: AsyncSession = Depends(get_session)

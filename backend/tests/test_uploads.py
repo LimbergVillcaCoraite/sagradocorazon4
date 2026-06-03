@@ -82,7 +82,7 @@ def test_create_gallery(client: TestClient, session: Session):
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Test Gallery"
-    assert data["images_count"] == 0
+    assert data["albums_count"] == 0
 
 
 def test_list_galleries(client: TestClient, session: Session):

@@ -80,6 +80,8 @@ async def _create_user(session: AsyncSession, payload: UserCreate):
         await session_commit(session)
         await session_refresh(session, user)
         return _to_user_read(user, role_name=role.name if role else role_name)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"No se pudo crear el usuario: {str(e)}")
