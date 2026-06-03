@@ -5,7 +5,7 @@ ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=${VITE_API_URL}
 
 COPY package*.json ./
-RUN rm -rf node_modules package-lock.json && npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
