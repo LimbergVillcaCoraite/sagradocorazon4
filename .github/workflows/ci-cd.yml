@@ -109,91 +109,48 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: [docker-build]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    env:
-      PROD_HOST: ${{ secrets.PROD_HOST }}
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && secrets.PROD_HOST != ''
     steps:
-      - name: Check deploy secrets
-        id: check
-        run: |
-          if [ -z "$PROD_HOST" ]; then
-            echo "PROD_HOST secret not set — skipping deploy" >&2
-            echo "skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Deploy to production server
-        if: steps.check.outputs.skip == 'false'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_PORT || '22' }}
+          port: ${{ secrets.PROD_PORT || 22 }}
           script_stop: true
           script: |
             set -e
-
             APP_DIR=/opt/sagradoCorazon4
+            COMPOSE_CMD=podman-compose
 
-            if ! command -v git >/dev/null 2>&1; then
-              sudo yum install -y git
-            fi
-
-            if ! command -v docker >/dev/null 2>&1; then
-              sudo yum install -y docker || sudo yum install -y podman podman-docker
-            fi
-
-            if systemctl list-unit-files | grep -q '^docker\.service'; then
-              sudo systemctl enable docker
-              sudo systemctl start docker
-            fi
-
-            if ! docker compose version >/dev/null 2>&1; then
-              sudo yum install -y docker-compose-plugin || true
-              if ! docker compose version >/dev/null 2>&1; then
-                sudo yum install -y python3-pip || true
-                python3 -m pip install --user podman-compose || true
-                if [ -f /home/$USER/.local/bin/podman-compose ]; then
-                  sudo ln -sf /home/$USER/.local/bin/podman-compose /usr/local/bin/docker-compose
-                fi
-              fi
-            fi
-
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
-            elif command -v docker-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-            elif command -v podman-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="podman-compose"
-            else
-              echo "No compose command found"
-              exit 1
-            fi
-
-            sudo mkdir -p "$APP_DIR"
-            sudo chown -R "$USER:$USER" "$APP_DIR"
-
-            if [ ! -d "$APP_DIR/.git" ]; then
-              git clone "https://github.com/${{ github.repository }}.git" "$APP_DIR"
-            fi
-
+            # Update source code
             cd "$APP_DIR"
             git fetch --all --prune
-            git checkout main
             git reset --hard origin/main
 
-            cat > .env.prod << 'EOF'
+            # Write secrets to .env.prod
+            cat > "$APP_DIR/.env.prod" <<ENVEOF
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
             ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
             ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ADMIN_NAME=${{ secrets.ADMIN_NAME }}
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            EOF
+            ADMIN_NAME=${{ secrets.ADMIN_NAME:-Administrador }}
+            ENVEOF
 
-            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --build --force-recreate
+            # Pull latest images from GHCR (built by docker-build job)
+            docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest
+            docker pull ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest
 
-            # Run pending Alembic migrations after containers are up
+            # Tag as prod so docker-compose.prod.yml image references resolve
+            docker tag ghcr.io/limbergvillcacoraite/sagradocorazon4/backend:latest localhost/sagradocorazon4-backend:prod
+            docker tag ghcr.io/limbergvillcacoraite/sagradocorazon4/frontend:latest localhost/sagradocorazon4-frontend:prod
+
+            # Restart with new images, no rebuild needed
+            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod down
+            $COMPOSE_CMD -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
+
+            # Apply any pending DB migrations
+            sleep 10
             $COMPOSE_CMD -f docker-compose.prod.yml exec -T backend alembic upgrade heads
 
             docker image prune -f
