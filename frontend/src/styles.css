@@ -1232,6 +1232,11 @@ textarea { resize: vertical; min-height: 100px; }
 .error { color: var(--error); font-weight: 600; }
 .warning { color: var(--warning); font-weight: 600; }
 
+.field-error { display: block; color: var(--error); font-size: 0.78rem; margin-top: 3px; }
+.field--invalid input,
+.field--invalid textarea,
+.field--invalid select { border-color: var(--error) !important; }
+
 .footer {
    margin-top: 22px;
    padding: 32px 36px;

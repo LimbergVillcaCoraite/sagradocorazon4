@@ -1407,7 +1407,75 @@ function AuthPanel({ token, userLabel, roleLabel, avatarUrl, onLogin, onLogout, 
 function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onTokenMissing }) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [formErrors, setFormErrors] = useState({})
   const { addToast } = useToast()
+
+  function clearFieldError(field) {
+    setFormErrors((prev) => { const next = { ...prev }; delete next[field]; return next })
+  }
+
+  function validateNews() {
+    const errs = {}
+    if (!form.newsTitle?.trim()) errs.newsTitle = 'El título es obligatorio'
+    else if (form.newsTitle.trim().length < 3) errs.newsTitle = 'El título debe tener al menos 3 caracteres'
+    if (!form.newsExcerpt?.trim()) errs.newsExcerpt = 'El resumen es obligatorio'
+    if (!form.newsContent?.trim()) errs.newsContent = 'El contenido es obligatorio'
+    else if (form.newsContent.trim().length < 10) errs.newsContent = 'El contenido debe tener al menos 10 caracteres'
+    return errs
+  }
+
+  function validateNotice() {
+    const errs = {}
+    if (!form.noticeTitle?.trim()) errs.noticeTitle = 'El título es obligatorio'
+    else if (form.noticeTitle.trim().length < 3) errs.noticeTitle = 'El título debe tener al menos 3 caracteres'
+    if (!form.noticeContent?.trim()) errs.noticeContent = 'El contenido es obligatorio'
+    else if (form.noticeContent.trim().length < 10) errs.noticeContent = 'El contenido debe tener al menos 10 caracteres'
+    if (form.noticeExpiry) {
+      const d = new Date(form.noticeExpiry)
+      if (isNaN(d.getTime()) || d <= new Date()) errs.noticeExpiry = 'La fecha límite debe ser futura'
+    }
+    return errs
+  }
+
+  function validateActivity() {
+    const errs = {}
+    if (!form.activityTitle?.trim()) errs.activityTitle = 'El título es obligatorio'
+    else if (form.activityTitle.trim().length < 3) errs.activityTitle = 'El título debe tener al menos 3 caracteres'
+    if (!form.activityDescription?.trim()) errs.activityDescription = 'La descripción es obligatoria'
+    else if (form.activityDescription.trim().length < 10) errs.activityDescription = 'La descripción debe tener al menos 10 caracteres'
+    if (form.activityDate && form.activityPublishAt) {
+      if (new Date(form.activityPublishAt) > new Date(form.activityDate))
+        errs.activityPublishAt = 'La fecha de publicación no puede ser posterior a la fecha del evento'
+    }
+    return errs
+  }
+
+  function validateGallery() {
+    const errs = {}
+    if (!form.galleryTitle?.trim()) errs.galleryTitle = 'El título es obligatorio'
+    else if (form.galleryTitle.trim().length < 3) errs.galleryTitle = 'El título debe tener al menos 3 caracteres'
+    return errs
+  }
+
+  function validateUser() {
+    const errs = {}
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!userForm.name?.trim()) errs.userName = 'El nombre es obligatorio'
+    else if (userForm.name.trim().length < 2) errs.userName = 'El nombre debe tener al menos 2 caracteres'
+    if (!userForm.email?.trim()) errs.userEmail = 'El email es obligatorio'
+    else if (!emailRe.test(userForm.email.trim())) errs.userEmail = 'Ingresa un email válido'
+    if (!userForm.password?.trim()) errs.userPassword = 'La contraseña es obligatoria'
+    else if (userForm.password.length < 6) errs.userPassword = 'La contraseña debe tener al menos 6 caracteres'
+    return errs
+  }
+
+  function validateNotification() {
+    const errs = {}
+    if (!form.notificationTitle?.trim()) errs.notificationTitle = 'El título es obligatorio'
+    if (!form.notificationBody?.trim()) errs.notificationBody = 'El mensaje es obligatorio'
+    return errs
+  }
+
   // granular loading states for admin actions
   const [savingProfile, setSavingProfile] = useState(false)
   const [creatingNews, setCreatingNews] = useState(false)
@@ -1521,10 +1589,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
       setError('Solo el administrador puede crear usuarios')
       return
     }
-    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password.trim()) {
-      setError('Completa nombre, email y contraseña')
-      return
-    }
+    const errs = validateUser()
+    if (Object.keys(errs).length) { setFormErrors(errs); return }
+    setFormErrors({})
     setCreatingUserLoading(true)
     setError('')
     setStatus('')
@@ -2261,6 +2328,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
   async function createNews(e) {
     e.preventDefault()
     guard()
+    const errs = validateNews()
+    if (Object.keys(errs).length) { setFormErrors(errs); return }
+    setFormErrors({})
     setError('')
     setStatus('')
     setCreatingNews(true)
@@ -2313,6 +2383,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
    async function createNotice(e) {
      e.preventDefault()
      guard()
+     const errs = validateNotice()
+     if (Object.keys(errs).length) { setFormErrors(errs); return }
+     setFormErrors({})
      setError('')
      setStatus('')
      setCreatingNotice(true)
@@ -2360,6 +2433,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
    async function createActivity(e) {
       e.preventDefault()
       guard()
+      const errs = validateActivity()
+      if (Object.keys(errs).length) { setFormErrors(errs); return }
+      setFormErrors({})
       setError('')
       setStatus('')
       setCreatingActivityLoading(true)
@@ -2419,6 +2495,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
    async function createGallery(e) {
       e.preventDefault()
       guard()
+      const errs = validateGallery()
+      if (Object.keys(errs).length) { setFormErrors(errs); return }
+      setFormErrors({})
       setError('')
       setStatus('')
       setCreatingGalleryLoading(true)
@@ -2484,6 +2563,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
   async function sendNotification(e) {
     e.preventDefault()
     guard()
+    const errs = validateNotification()
+    if (Object.keys(errs).length) { setFormErrors(errs); return }
+    setFormErrors({})
     setError('')
     setStatus('')
     setSendingNotificationLoading(true)
@@ -2774,9 +2856,21 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           <Card title="Crear usuario" subtitle="Administración de accesos">
             <form className="stack gap-sm" onSubmit={createUser}>
               <div className="grid grid--2 profile-grid">
-                <label className="field"><span>Nombre completo</span><input value={userForm.name} onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))} placeholder="Nombre del usuario" /></label>
-                <label className="field"><span>Email</span><input value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} type="email" placeholder="correo@ejemplo.com" /></label>
-                <label className="field"><span>Contraseña</span><input value={userForm.password} onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))} type="password" placeholder="Contraseña temporal o definitiva" /></label>
+                <label className={`field${formErrors.userName ? ' field--invalid' : ''}`}>
+                  <span>Nombre completo <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={userForm.name} onChange={(e) => { setUserForm((p) => ({ ...p, name: e.target.value })); clearFieldError('userName') }} placeholder="Nombre del usuario" />
+                  {formErrors.userName && <span className="field-error">{formErrors.userName}</span>}
+                </label>
+                <label className={`field${formErrors.userEmail ? ' field--invalid' : ''}`}>
+                  <span>Email <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={userForm.email} onChange={(e) => { setUserForm((p) => ({ ...p, email: e.target.value })); clearFieldError('userEmail') }} type="email" placeholder="correo@ejemplo.com" />
+                  {formErrors.userEmail && <span className="field-error">{formErrors.userEmail}</span>}
+                </label>
+                <label className={`field${formErrors.userPassword ? ' field--invalid' : ''}`}>
+                  <span>Contraseña <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={userForm.password} onChange={(e) => { setUserForm((p) => ({ ...p, password: e.target.value })); clearFieldError('userPassword') }} type="password" placeholder="Mínimo 6 caracteres" />
+                  {formErrors.userPassword && <span className="field-error">{formErrors.userPassword}</span>}
+                </label>
                 <label className="field"><span>Rol</span>
                   <select value={userForm.role_name} onChange={(e) => setUserForm((p) => ({ ...p, role_name: e.target.value }))}>
                     <option value="ESTUDIANTE">Estudiante</option>
@@ -2804,15 +2898,27 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           <div className="grid gap-sm">
             <Card title="Crear noticia" subtitle="News">
               <form className="stack gap-sm" onSubmit={createNews}>
-                <label className="field"><span>Título</span><input value={form.newsTitle} onChange={(e) => setForm((p) => ({ ...p, newsTitle: e.target.value }))} /></label>
+                <label className={`field${formErrors.newsTitle ? ' field--invalid' : ''}`}>
+                  <span>Título <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={form.newsTitle} onChange={(e) => { setForm((p) => ({ ...p, newsTitle: e.target.value })); clearFieldError('newsTitle') }} />
+                  {formErrors.newsTitle && <span className="field-error">{formErrors.newsTitle}</span>}
+                </label>
                 <label className="field"><span>Etiqueta / categoría</span>
                   <select value={form.newsLabel} onChange={(e) => setForm((p) => ({ ...p, newsLabel: e.target.value }))}>
                     <option value="">Sin etiqueta</option>
                     {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
                   </select>
                 </label>
-                <label className="field"><span>Resumen</span><input value={form.newsExcerpt} onChange={(e) => setForm((p) => ({ ...p, newsExcerpt: e.target.value }))} /></label>
-                <label className="field"><span>Contenido</span><textarea rows="4" value={form.newsContent} onChange={(e) => setForm((p) => ({ ...p, newsContent: e.target.value }))} /></label>
+                <label className={`field${formErrors.newsExcerpt ? ' field--invalid' : ''}`}>
+                  <span>Resumen <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={form.newsExcerpt} onChange={(e) => { setForm((p) => ({ ...p, newsExcerpt: e.target.value })); clearFieldError('newsExcerpt') }} />
+                  {formErrors.newsExcerpt && <span className="field-error">{formErrors.newsExcerpt}</span>}
+                </label>
+                <label className={`field${formErrors.newsContent ? ' field--invalid' : ''}`}>
+                  <span>Contenido <span style={{color:'var(--error)'}}>*</span></span>
+                  <textarea rows="4" value={form.newsContent} onChange={(e) => { setForm((p) => ({ ...p, newsContent: e.target.value })); clearFieldError('newsContent') }} />
+                  {formErrors.newsContent && <span className="field-error">{formErrors.newsContent}</span>}
+                </label>
                 <label className="field">
                   <span>Adjuntos para la noticia</span>
                   <input
@@ -2859,14 +2965,22 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         {activeAdminSection === 'avisos' && (
           <Card title="Crear aviso" subtitle="Notices">
             <form className="stack gap-sm" onSubmit={createNotice}>
-              <label className="field"><span>Título</span><input value={form.noticeTitle} onChange={(e) => setForm((p) => ({ ...p, noticeTitle: e.target.value }))} /></label>
+              <label className={`field${formErrors.noticeTitle ? ' field--invalid' : ''}`}>
+                <span>Título <span style={{color:'var(--error)'}}>*</span></span>
+                <input value={form.noticeTitle} onChange={(e) => { setForm((p) => ({ ...p, noticeTitle: e.target.value })); clearFieldError('noticeTitle') }} />
+                {formErrors.noticeTitle && <span className="field-error">{formErrors.noticeTitle}</span>}
+              </label>
               <label className="field"><span>Etiqueta / categoría</span>
                 <select value={form.noticeLabel} onChange={(e) => setForm((p) => ({ ...p, noticeLabel: e.target.value }))}>
                   <option value="">Sin etiqueta</option>
                   {LABEL_OPTIONS.map((label) => <option key={label} value={label}>{getLabelName(label)}</option>)}
                 </select>
               </label>
-              <label className="field"><span>Contenido</span><textarea rows="4" value={form.noticeContent} onChange={(e) => setForm((p) => ({ ...p, noticeContent: e.target.value }))} /></label>
+              <label className={`field${formErrors.noticeContent ? ' field--invalid' : ''}`}>
+                <span>Contenido <span style={{color:'var(--error)'}}>*</span></span>
+                <textarea rows="4" value={form.noticeContent} onChange={(e) => { setForm((p) => ({ ...p, noticeContent: e.target.value })); clearFieldError('noticeContent') }} />
+                {formErrors.noticeContent && <span className="field-error">{formErrors.noticeContent}</span>}
+              </label>
               <label className="field">
                 <span>Audiencia</span>
                 <select value={form.noticeAudience} onChange={(e) => setForm((p) => ({ ...p, noticeAudience: e.target.value }))}>
@@ -2876,9 +2990,10 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                   <option value="teachers">Profesores</option>
                 </select>
               </label>
-              <label className="field">
+              <label className={`field${formErrors.noticeExpiry ? ' field--invalid' : ''}`}>
                 <span>Fecha límite (opcional)</span>
-                <input type="datetime-local" value={form.noticeExpiry} onChange={(e) => setForm((p) => ({ ...p, noticeExpiry: e.target.value }))} />
+                <input type="datetime-local" value={form.noticeExpiry} onChange={(e) => { setForm((p) => ({ ...p, noticeExpiry: e.target.value })); clearFieldError('noticeExpiry') }} />
+                {formErrors.noticeExpiry && <span className="field-error">{formErrors.noticeExpiry}</span>}
               </label>
               <LoadingButton className="btn" loading={creatingNotice} type="submit">Enviar aviso</LoadingButton>
             </form>
@@ -2889,8 +3004,16 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
           <div className="grid gap-sm">
             <Card title="Crear actividad" subtitle="Activities">
               <form className="stack gap-sm" onSubmit={createActivity}>
-                <label className="field"><span>Titulo</span><input value={form.activityTitle} onChange={(e) => setForm((p) => ({ ...p, activityTitle: e.target.value }))} /></label>
-                <label className="field"><span>Descripción</span><textarea rows="4" value={form.activityDescription} onChange={(e) => setForm((p) => ({ ...p, activityDescription: e.target.value }))} /></label>
+                <label className={`field${formErrors.activityTitle ? ' field--invalid' : ''}`}>
+                  <span>Título <span style={{color:'var(--error)'}}>*</span></span>
+                  <input value={form.activityTitle} onChange={(e) => { setForm((p) => ({ ...p, activityTitle: e.target.value })); clearFieldError('activityTitle') }} />
+                  {formErrors.activityTitle && <span className="field-error">{formErrors.activityTitle}</span>}
+                </label>
+                <label className={`field${formErrors.activityDescription ? ' field--invalid' : ''}`}>
+                  <span>Descripción <span style={{color:'var(--error)'}}>*</span></span>
+                  <textarea rows="4" value={form.activityDescription} onChange={(e) => { setForm((p) => ({ ...p, activityDescription: e.target.value })); clearFieldError('activityDescription') }} />
+                  {formErrors.activityDescription && <span className="field-error">{formErrors.activityDescription}</span>}
+                </label>
                 <label className="field">
                   <span>Tipo de actividad</span>
                   <select value={form.activityType} onChange={(e) => setForm((p) => ({ ...p, activityType: e.target.value }))}>
@@ -2901,7 +3024,11 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
                 </label>
                 <label className="field"><span>Lugar</span><input value={form.activityLocation} onChange={(e) => setForm((p) => ({ ...p, activityLocation: e.target.value }))} placeholder="Patio central, coliseo, etc." /></label>
                 <label className="field"><span>Fecha de actividad</span><input type="datetime-local" value={form.activityDate} onChange={(e) => setForm((p) => ({ ...p, activityDate: e.target.value }))} /></label>
-                <label className="field"><span>Fecha de publicacion</span><input type="datetime-local" value={form.activityPublishAt} onChange={(e) => setForm((p) => ({ ...p, activityPublishAt: e.target.value }))} /></label>
+                <label className={`field${formErrors.activityPublishAt ? ' field--invalid' : ''}`}>
+                  <span>Fecha de publicación</span>
+                  <input type="datetime-local" value={form.activityPublishAt} onChange={(e) => { setForm((p) => ({ ...p, activityPublishAt: e.target.value })); clearFieldError('activityPublishAt') }} />
+                  {formErrors.activityPublishAt && <span className="field-error">{formErrors.activityPublishAt}</span>}
+                </label>
                 <label className="field">
                   <span>Adjuntos multimedia (imagenes, videos, audios)</span>
                   <input
@@ -2975,9 +3102,13 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
             <div className="grid gap-sm">
               <Card title="Crear galería" subtitle="Galería institucional">
                 <form className="stack gap-sm" onSubmit={createGallery}>
-                  <label className="field"><span>Título</span><input value={form.galleryTitle} onChange={(e) => setForm((p) => ({ ...p, galleryTitle: e.target.value }))} /></label>
+                  <label className={`field${formErrors.galleryTitle ? ' field--invalid' : ''}`}>
+                    <span>Título <span style={{color:'var(--error)'}}>*</span></span>
+                    <input value={form.galleryTitle} onChange={(e) => { setForm((p) => ({ ...p, galleryTitle: e.target.value })); clearFieldError('galleryTitle') }} />
+                    {formErrors.galleryTitle && <span className="field-error">{formErrors.galleryTitle}</span>}
+                  </label>
                   <label className="field"><span>Descripción</span><textarea rows="4" value={form.galleryDescription} onChange={(e) => setForm((p) => ({ ...p, galleryDescription: e.target.value }))} /></label>
-                   <LoadingButton className="btn" loading={creatingGalleryLoading} type="submit">Guardar galería</LoadingButton>
+                  <LoadingButton className="btn" loading={creatingGalleryLoading} type="submit">Guardar galería</LoadingButton>
                 </form>
               </Card>
 
@@ -3100,9 +3231,17 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         {activeAdminSection === 'notificaciones' && (
           <Card title="Enviar notificación" subtitle="Email + Web Push">
             <form className="stack gap-sm" onSubmit={sendNotification}>
-              <label className="field"><span>Título</span><input value={form.notificationTitle} onChange={(e) => setForm((p) => ({ ...p, notificationTitle: e.target.value }))} /></label>
-              <label className="field"><span>Mensaje</span><textarea rows="4" value={form.notificationBody} onChange={(e) => setForm((p) => ({ ...p, notificationBody: e.target.value }))} /></label>
-               <LoadingButton className="btn" loading={sendingNotificationLoading} type="submit">Enviar</LoadingButton>
+              <label className={`field${formErrors.notificationTitle ? ' field--invalid' : ''}`}>
+                <span>Título <span style={{color:'var(--error)'}}>*</span></span>
+                <input value={form.notificationTitle} onChange={(e) => { setForm((p) => ({ ...p, notificationTitle: e.target.value })); clearFieldError('notificationTitle') }} />
+                {formErrors.notificationTitle && <span className="field-error">{formErrors.notificationTitle}</span>}
+              </label>
+              <label className={`field${formErrors.notificationBody ? ' field--invalid' : ''}`}>
+                <span>Mensaje <span style={{color:'var(--error)'}}>*</span></span>
+                <textarea rows="4" value={form.notificationBody} onChange={(e) => { setForm((p) => ({ ...p, notificationBody: e.target.value })); clearFieldError('notificationBody') }} />
+                {formErrors.notificationBody && <span className="field-error">{formErrors.notificationBody}</span>}
+              </label>
+              <LoadingButton className="btn" loading={sendingNotificationLoading} type="submit">Enviar</LoadingButton>
             </form>
           </Card>
         )}
