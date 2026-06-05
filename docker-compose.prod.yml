@@ -8,9 +8,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: sagradocorazon
-      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command: postgres -c hba_file=/etc/postgresql/pg_hba.conf
     networks:
       - internal
     healthcheck:
