@@ -1854,6 +1854,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         body: JSON.stringify({ cover_image: imageUrl }),
       })
       await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+      reload()
       addToast('Portada actualizada', { type: 'success' })
     } catch (err) {
       setError(err.message)
@@ -1880,6 +1881,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
         body: fd,
       })
       await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+      reload()
       setAlbumCoverFile(null)
       addToast('Portada subida correctamente', { type: 'success' })
     } catch (err) {
@@ -1956,6 +1958,7 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
       e.target.reset()
       setEditingAlbumFiles([])
       await Promise.all([refreshAlbums(), loadAlbumDetail(editingAlbumId)])
+      reload()
     } catch (err) {
       setError(err.message)
       addToast('Error al subir imágenes: ' + err.message, { type: 'error' })
