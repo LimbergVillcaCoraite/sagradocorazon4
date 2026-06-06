@@ -1443,9 +1443,9 @@ function AdminPanel({ token, roleLabel, profile, history, refreshPublic, onToken
     else if (form.activityTitle.trim().length < 3) errs.activityTitle = 'El título debe tener al menos 3 caracteres'
     if (!form.activityDescription?.trim()) errs.activityDescription = 'La descripción es obligatoria'
     else if (form.activityDescription.trim().length < 10) errs.activityDescription = 'La descripción debe tener al menos 10 caracteres'
-    if (form.activityDate && form.activityPublishAt) {
-      if (new Date(form.activityPublishAt) > new Date(form.activityDate))
-        errs.activityPublishAt = 'La fecha de publicación no puede ser posterior a la fecha del evento'
+    if (form.activityPublishAt) {
+      if (new Date(form.activityPublishAt) < new Date())
+        errs.activityPublishAt = 'La fecha de publicación programada debe ser en el futuro'
     }
     return errs
   }
