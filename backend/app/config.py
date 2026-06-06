@@ -69,6 +69,7 @@ class Settings:
     minio_access_key: str = field(default_factory=lambda: os.getenv("MINIO_ACCESS_KEY", "minioadmin"))
     minio_secret_key: str = field(default_factory=lambda: os.getenv("MINIO_SECRET_KEY", "minioadmin"))
     minio_secure: bool = field(default_factory=lambda: _env_bool("MINIO_SECURE", False))
+    minio_public_secure: bool = field(default_factory=lambda: _env_bool("MINIO_PUBLIC_SECURE", False))
     minio_bucket: str = field(default_factory=lambda: os.getenv("MINIO_BUCKET", "sagrado-corazon"))
 
 

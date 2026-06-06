@@ -20,7 +20,7 @@ client = Minio(
 executor = ThreadPoolExecutor(max_workers=5)
 
 def build_public_file_url(file_path: str) -> str:
-    scheme = "https" if settings.minio_secure else "http"
+    scheme = "https" if settings.minio_public_secure else "http"
     return f"{scheme}://{settings.minio_public_endpoint}/{settings.minio_bucket}/{file_path}"
 
 async def ensure_bucket_exists():
