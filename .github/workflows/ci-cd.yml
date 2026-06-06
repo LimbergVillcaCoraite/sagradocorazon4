@@ -123,11 +123,18 @@ jobs:
             cd /opt/sagradoCorazon4
             git fetch --all --prune
             git reset --hard origin/main
+
+            # Build new images BEFORE taking anything down
             docker build --no-cache -t localhost/sagradocorazon4-backend:prod ./backend
             docker build --no-cache -t localhost/sagradocorazon4-frontend:prod ./frontend
+
+            # Swap — if up fails, try to recover immediately
             podman-compose -f docker-compose.prod.yml --env-file .env.prod down
-            podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
-            sleep 10
+            if ! podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build; then
+              podman-compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
+            fi
+
+            sleep 15
             podman-compose -f docker-compose.prod.yml exec -T backend alembic upgrade heads || true
             docker image prune -f || true
 
